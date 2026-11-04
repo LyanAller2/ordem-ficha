@@ -32,9 +32,9 @@
       min-height: 100vh;
       color: var(--ink);
       background:
-        radial-gradient(ellipse at 50% 0%, rgba(116, 38, 21, .12), transparent 48%),
+        radial-gradient(ellipse at 50% 0%, var(--redGlow), transparent 48%),
         repeating-linear-gradient(0deg, transparent 0 39px, rgba(255,255,255,.012) 40px),
-        #080909;
+        var(--bg);
       font-family: Georgia, 'Times New Roman', serif;
     }
     button, input, select, textarea { font: inherit; }
@@ -58,6 +58,24 @@
     .brand strong { color:#d4c9bd; letter-spacing:.18em; font-size:12px; font-weight:700; }
     .brand span { color:var(--red); letter-spacing:.22em; font:10px/1.2 Arial,sans-serif; }
     .toolbar-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:7px; }
+    .action, .toolbar select { transition:background .2s ease,border-color .2s ease,color .2s ease,transform .2s ease,box-shadow .2s ease; }
+    .action:hover { transform:translateY(-1px); box-shadow:0 5px 16px rgba(0,0,0,.22); }
+    .theme-panel { margin:0 0 16px; padding:14px 16px; border:1px solid var(--lineSoft); background:linear-gradient(135deg,rgba(255,255,255,.035),rgba(0,0,0,.12)); animation:theme-enter .28s ease both; }
+    .theme-panel-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; }
+    .theme-panel h3 { margin:0; color:var(--ink); font:bold 14px Georgia,serif; letter-spacing:.12em; text-transform:uppercase; }
+    .theme-controls { display:flex; flex-wrap:wrap; align-items:end; gap:14px 20px; }
+    .theme-color { display:grid; gap:6px; color:var(--muted); font:10px Arial,sans-serif; letter-spacing:.1em; text-transform:uppercase; }
+    .theme-color input[type="color"] { width:58px; height:34px; padding:3px; border:1px solid var(--lineSoft); border-radius:3px; background:#111; cursor:pointer; }
+    .theme-presets { display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
+    .theme-preset { min-height:32px; border:1px solid var(--lineSoft); background:#151515; color:var(--ink); padding:6px 10px; font:10px Arial,sans-serif; letter-spacing:.06em; cursor:pointer; transition:transform .2s,border-color .2s; }
+    .theme-preset:hover { transform:translateY(-2px); border-color:var(--red); }
+    .theme-note { flex-basis:100%; color:var(--dim); font:11px/1.5 Arial,sans-serif; }
+    @keyframes theme-enter { from { opacity:0; transform:translateY(-7px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes panel-arrive { from { opacity:.72; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
+    .panel { transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease; animation:panel-arrive .38s ease both; }
+    @media (hover:hover) { .panel:hover { transform:translateY(-2px); border-color:var(--line); box-shadow:0 10px 26px rgba(0,0,0,.16); } }
+    .no-motion *, .no-motion *::before, .no-motion *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+    @media(max-width:600px){ .theme-controls { align-items:start; } .theme-panel-head { align-items:flex-start; } }
     .toolbar select { max-width:190px; }
     .action, .toolbar select {
       min-height:34px; border:1px solid var(--lineSoft); border-radius:2px;
@@ -318,6 +336,7 @@
           <span class="save-state" id="saveState" aria-live="polite">● SALVO NESTE NAVEGADOR</span>
           <label class="sr-only" for="characterSelect">Selecionar personagem</label>
           <select id="characterSelect" title="Selecionar personagem"></select>
+          <button class="action" id="customizeSheet" aria-expanded="false">PERSONALIZAR</button>
           <button class="action" id="newCharacter">+ NOVO</button>
           <button class="action" id="duplicateCharacter">DUPLICAR</button>
           <button class="action danger" id="deleteCharacter">EXCLUIR</button>
@@ -328,6 +347,33 @@
           <input id="fileInput" type="file" accept=".html,.htm,.json,text/html,application/json" hidden>
         </div>
       </header>
+
+      <section class="theme-panel hidden-panel" id="themePanel" aria-label="Personalização visual">
+        <div class="theme-panel-head">
+          <h3>Personalização visual</h3>
+          <button class="action" id="closeThemePanel" type="button">FECHAR</button>
+        </div>
+        <div class="theme-controls">
+          <label class="theme-color">Fundo da página
+            <input type="color" id="themeBackground" value="#080909">
+          </label>
+          <label class="theme-color">Cor de destaque
+            <input type="color" id="themeAccent" value="#c34425">
+          </label>
+          <div class="theme-presets" aria-label="Temas prontos">
+            <button type="button" class="theme-preset" data-theme-background="#080909" data-theme-accent="#c34425">CLÁSSICO</button>
+            <button type="button" class="theme-preset" data-theme-background="#08131b" data-theme-accent="#45a9c7">ABISSAL</button>
+            <button type="button" class="theme-preset" data-theme-background="#130d1b" data-theme-accent="#a879d6">ARCANO</button>
+            <button type="button" class="theme-preset" data-theme-background="#10170f" data-theme-accent="#8fae68">FLORESTA</button>
+            <button type="button" class="theme-preset" data-theme-background="#1a1010" data-theme-accent="#c69b58">DOSSIÊ</button>
+          </div>
+          <label class="theme-color"><span>Animações suaves</span>
+            <input type="checkbox" id="themeAnimations" checked>
+          </label>
+          <button type="button" class="action" id="resetTheme">RESTAURAR PADRÃO</button>
+          <p class="theme-note">As cores e animações são apenas visuais: não alteram atributos, recursos ou regras. Cada ficha guarda suas próprias preferências.</p>
+        </div>
+      </section>
 
       <section class="identity" aria-label="Identificação do agente">
         <div>
@@ -701,7 +747,29 @@
       const {data,error}=await cloudClient.from('campaigns').insert({name,invite_code:code,owner_id:cloudUser.id}).select().single();
       if(error){cloudMessage(error.message);return;} cloudCampaign=data;cloudRole='owner';await cloudOpenMaster();
     }
-    function normalizeApp(value){const chars=Array.isArray(value?.characters)?value.characters.map(normalizeCharacter):[];if(!chars.length)chars.push(freshCharacter());return {characters:chars,activeId:value?.activeId&&chars.some(c=>c.id===value.activeId)?value.activeId:chars[0].id};}
+    function normalizeVisualSettings(value){
+      const validHex=v=>typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v);
+      return {background:validHex(value?.background)?value.background:'#080909',accent:validHex(value?.accent)?value.accent:'#c34425',animations:value?.animations!==false};
+    }
+    function hexToRgba(hex,alpha){
+      const n=parseInt(String(hex).replace('#',''),16);
+      return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+alpha+')';
+    }
+    function applyVisualSettings(){
+      app.visualSettings=normalizeVisualSettings(app.visualSettings);
+      const v=app.visualSettings,root=document.documentElement;
+      root.style.setProperty('--bg',v.background);
+      root.style.setProperty('--red',v.accent);
+      root.style.setProperty('--red2',v.accent);
+      root.style.setProperty('--redGlow',hexToRgba(v.accent,.13));
+      root.style.setProperty('--line',hexToRgba(v.accent,.72));
+      root.style.setProperty('--lineSoft',hexToRgba(v.accent,.30));
+      document.body.classList.toggle('no-motion',!v.animations);
+      if($('themeBackground')) $('themeBackground').value=v.background;
+      if($('themeAccent')) $('themeAccent').value=v.accent;
+      if($('themeAnimations')) $('themeAnimations').checked=v.animations;
+    }
+    function normalizeApp(value){const chars=Array.isArray(value?.characters)?value.characters.map(normalizeCharacter):[];if(!chars.length)chars.push(freshCharacter());return {characters:chars,activeId:value?.activeId&&chars.some(c=>c.id===value.activeId)?value.activeId:chars[0].id,visualSettings:normalizeVisualSettings(value?.visualSettings)};}
     function createPlayerToken(){
       const bytes=new Uint8Array(32); crypto.getRandomValues(bytes);
       let binary=''; bytes.forEach(b=>binary+=String.fromCharCode(b));
@@ -1143,6 +1211,27 @@
     });
     $('addSkill').addEventListener('click',()=>{active().skills.push({name:'Nova perícia',die:'d4',attribute:'physical'});renderSkills();updateSkillDice();save();const inputs=$('skillsList').querySelectorAll('.skill-input.name');inputs[inputs.length-1]?.focus();});
     $('characterSelect').addEventListener('change',e=>{app.activeId=e.target.value;updateIdentity();save();});
+    function toggleThemePanel(open){
+      const panel=$('themePanel'),show=typeof open==='boolean'?open:panel.classList.contains('hidden-panel');
+      panel.classList.toggle('hidden-panel',!show);
+      $('customizeSheet').setAttribute('aria-expanded',String(show));
+    }
+    function setVisualSetting(key,value){
+      app.visualSettings=normalizeVisualSettings({...app.visualSettings,[key]:value});
+      applyVisualSettings();save();
+    }
+    $('customizeSheet').addEventListener('click',()=>toggleThemePanel());
+    $('closeThemePanel').addEventListener('click',()=>toggleThemePanel(false));
+    $('themeBackground').addEventListener('input',e=>setVisualSetting('background',e.target.value));
+    $('themeAccent').addEventListener('input',e=>setVisualSetting('accent',e.target.value));
+    $('themeAnimations').addEventListener('change',e=>setVisualSetting('animations',e.target.checked));
+    document.querySelectorAll('[data-theme-background]').forEach(btn=>btn.addEventListener('click',()=>{
+      app.visualSettings=normalizeVisualSettings({...app.visualSettings,background:btn.dataset.themeBackground,accent:btn.dataset.themeAccent});
+      applyVisualSettings();save();
+    }));
+    $('resetTheme').addEventListener('click',()=>{
+      app.visualSettings=normalizeVisualSettings(null);applyVisualSettings();save();showToast('Visual restaurado ao padrão.');
+    });
     $('newCharacter').addEventListener('click',()=>{const c=freshCharacter();app.characters.push(c);app.activeId=c.id;updateIdentity();save();$('characterName').focus();$('characterName').select();});
     $('duplicateCharacter').addEventListener('click',()=>{const c=deepClone(active());c.id=makeId();c.name=(c.name||'AGENTE')+' — CÓPIA';app.characters.push(c);app.activeId=c.id;updateIdentity();save();showToast('Personagem duplicado.');});
     $('deleteCharacter').addEventListener('click',()=>{if(app.characters.length<=1){showToast('Mantenha ao menos um personagem no arquivo.');return;}$('confirmModal').classList.add('open');});
@@ -1323,7 +1412,7 @@
         showToast('Cópia recebida pelo link.');
       }catch(err){console.error(err);showToast('O link compartilhado está inválido ou incompleto.');}
     }
-    importFromHash(); updateIdentity(); save(); cloudInit();
+    importFromHash(); applyVisualSettings(); updateIdentity(); save(); cloudInit();
   </script>
 </body>
 </html>
