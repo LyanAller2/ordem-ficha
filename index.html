@@ -256,6 +256,14 @@
       </div>
       <div class="cloud-box"><h3>Acesso dos jogadores</h3><p>Os jogadores não usam esta tela. Você libera um acesso individual para cada pessoa no painel da campanha e envia o link correspondente.</p></div>
     </div>
+    <div id="cloudGuestEntry" class="cloud-hidden">
+      <div class="cloud-box">
+        <h3>Acesso liberado pelo mestre</h3>
+        <p>Digite seu nome para identificar sua ficha. Não é necessário criar conta, informar e-mail ou senha.</p>
+        <label for="cloudGuestName">Seu nome</label><input id="cloudGuestName" maxlength="60" placeholder="Digite seu nome">
+        <div class="cloud-actions"><button class="action primary" id="cloudGuestEnter">ABRIR MINHA FICHA</button></div>
+      </div>
+    </div>
     <div id="cloudCampaignArea" class="cloud-hidden">
       <p id="cloudWelcome"></p>
       <div class="cloud-box"><h3>Criar campanha</h3><label for="cloudCampaignName">Nome da campanha</label><input id="cloudCampaignName" maxlength="60" value="Minha campanha"><div class="cloud-actions"><button class="action primary" id="cloudCreateCampaign">CRIAR CAMPANHA</button></div></div>
@@ -266,8 +274,7 @@
       <p id="cloudInviteDisplay"></p>
       <section class="cloud-box" style="margin:12px 0">
         <h3>Liberar acesso para jogador</h3>
-        <label for="cloudPlayerName">Nome do jogador</label>
-        <input id="cloudPlayerName" maxlength="60" placeholder="Ex.: Rafael">
+        <p>Gere um link exclusivo e envie ao jogador. Quando abrir, ele digita o próprio nome e a ficha fica vinculada a esse acesso.</p>
         <div class="cloud-actions"><button class="action primary" id="cloudCreatePlayerAccess">GERAR LINK INDIVIDUAL</button></div>
         <div id="cloudAccessResult" class="cloud-hidden" style="margin-top:12px">
           <p class="cloud-status">Link criado. Copie e envie somente para esse jogador:</p>
@@ -629,7 +636,7 @@
     const active=()=>app.characters.find(c=>c.id===app.activeId) || app.characters[0];
     function showToast(message){ const el=$('toast'); el.textContent=message; el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),2300); }
     let cloudClient=null, cloudUser=null, cloudCampaign=null, cloudRole=null, cloudChannel=null, cloudSaveTimer=null, cloudSaving=false;
-    let playerAccessToken=null, guestPlayerName='', guestSaveTimer=null, guestSaving=false, guestSavePending=false;
+    let playerAccessToken=null, playerAccessId=null, playerAccessCampaignId=null, guestPlayerName='', guestSaveTimer=null, guestSaving=false, guestSavePending=false;
     const SUPABASE_URL='https://wewxhztsjcnjzsproozd.supabase.co';
     const SUPABASE_PUBLIC_KEY='sb_publishable_QXN11JTAx_h6lSE0MHNA4Q_20nnUPn8';
     function save(){
@@ -643,6 +650,7 @@
       $('cloudAuthArea').classList.toggle('cloud-hidden',which!=='auth');
       $('cloudCampaignArea').classList.toggle('cloud-hidden',which!=='campaign');
       $('cloudDashboard').classList.toggle('cloud-hidden',which!=='dashboard');
+      $('cloudGuestEntry').classList.toggle('cloud-hidden',which!=='guest');
       $('cloudGate').classList.toggle('cloud-hidden',which==='hidden');
       $('cloudTopbar').classList.toggle('cloud-hidden',which!=='hidden'||!cloudUser||!cloudCampaign);
       $('cloudOpenDashboard').classList.toggle('cloud-hidden',!cloudUser||cloudRole!=='owner');
@@ -684,23 +692,20 @@
       return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
     }
     async function cloudCreatePlayerAccess(){
-      const playerName=$('cloudPlayerName').value.trim();
-      if(!playerName){cloudMessage('Digite o nome do jogador que receberá a permissão.');$('cloudPlayerName').focus();return;}
       if(!cloudCampaign||cloudRole!=='owner'){cloudMessage('Somente o mestre da campanha pode liberar acessos.');return;}
       cloudMessage('Gerando acesso individual...');
       try{
         const token=createPlayerToken(), tokenHash=await hashPlayerToken(token);
-        const {data,error}=await cloudClient.from('campaign_player_access').insert({campaign_id:cloudCampaign.id,player_name:playerName,token_hash:tokenHash}).select('id,player_name').single();
+        const {error}=await cloudClient.from('campaign_player_access').insert({campaign_id:cloudCampaign.id,player_name:'Aguardando jogador',token_hash:tokenHash});
         if(error)throw error;
         const link=new URL(location.href); link.hash='jogador='+token;
         $('cloudAccessUrl').value=link.toString();$('cloudAccessResult').classList.remove('cloud-hidden');
         $('cloudCopyAccess').onclick=async()=>{
           const field=$('cloudAccessUrl');
-          try{await navigator.clipboard.writeText(field.value);cloudMessage('Link copiado. Envie somente para '+playerName+'.');}
-          catch(err){field.focus();field.select();cloudMessage('Link selecionado. Use Ctrl+C para copiar e envie somente para '+playerName+'.');}
+          try{await navigator.clipboard.writeText(field.value);cloudMessage('Link copiado. Envie somente para o jogador autorizado.');}
+          catch(err){field.focus();field.select();cloudMessage('Link selecionado. Use Ctrl+C para copiar e envie somente para o jogador autorizado.');}
         };
-        $('cloudPlayerName').value='';
-        cloudMessage('Acesso criado para '+playerName+'. O link só aparece nesta criação; guarde e envie ao jogador.');
+        cloudMessage('Acesso individual criado. Envie o link; o jogador informará o próprio nome ao abrir.');
         await cloudRefreshSheets();
       }catch(err){cloudMessage('Não foi possível liberar o acesso: '+(err.message||err));}
     }
@@ -728,7 +733,7 @@
         if(!access.revoked){const revoke=document.createElement('button');revoke.className='action danger';revoke.textContent='REVOGAR ACESSO';revoke.addEventListener('click',()=>cloudRevokePlayerAccess(access.id,access.player_name));actions.append(revoke);}
         head.append(title,actions);el.append(head);
         const meta=document.createElement('p');
-        meta.textContent=access.revoked?'Acesso revogado.':sheet?'Ficha atualizada: '+new Date(sheet.updated_at).toLocaleString('pt-BR'):'Aguardando o jogador abrir o link individual.';
+        meta.textContent=access.revoked?'Acesso revogado.':sheet?'Ficha atualizada: '+new Date(sheet.updated_at).toLocaleString('pt-BR'):access.player_name==='Aguardando jogador'?'Link liberado; aguardando o jogador informar o nome.':'Aguardando a primeira edição da ficha.';
         el.append(meta);host.append(el);
       });
     }
@@ -746,34 +751,76 @@
       const lines=[`Classe: ${c.role||'—'} | Profissão: ${c.profession||'—'} | Nível: ${c.level}`,`Atributos — Físico: ${c.attributes.physical} · Mente: ${c.attributes.mind} · Emoção: ${c.attributes.emotion}`,`PV: ${c.resources.pv.current}/${c.resources.pv.max} · PD: ${c.resources.pd.current}/${c.resources.pd.max}`,`Habilidade da profissão: ${c.professionAbility.name||'—'}\n${c.professionAbility.description||''}`,`Perícias:\n${c.skills.map(sk=>`${sk.name}: ${sk.die} + ${sk.attribute}`).join('\n')}`,`Anotações:\n${c.notes||'—'}`];
       const detail=document.createElement('div');detail.className='cloud-detail';detail.textContent=lines.join('\n\n');card.append(detail);host.append(card);
     }
-    async function cloudGuestRequest(action,sheetData){
-      const response=await fetch(SUPABASE_URL+'/functions/v1/player-sheet',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLIC_KEY},body:JSON.stringify({action,token:playerAccessToken,...(sheetData?{sheet_data:sheetData}:{})})});
-      const payload=await response.json().catch(()=>({error:'Resposta inválida do servidor.'}));
-      if(!response.ok)throw new Error(payload.error||'Não foi possível validar o link.');
-      return payload;
+    function guestRequestHeaders(extra={}){
+      return {'apikey':SUPABASE_PUBLIC_KEY,'x-player-token':playerAccessToken,'Content-Type':'application/json',...extra};
+    }
+    async function cloudGuestRequest(action,payload){
+      const base=SUPABASE_URL+'/rest/v1/';
+      if(action==='load'){
+        const tokenHash=await hashPlayerToken(playerAccessToken);
+        const accessResponse=await fetch(base+'campaign_player_access?select=id,campaign_id,player_name,revoked&token_hash=eq.'+tokenHash+'&limit=1',{headers:guestRequestHeaders()});
+        const accesses=await accessResponse.json().catch(()=>[]);
+        const access=accesses?.[0];
+        if(!accessResponse.ok)throw new Error(accesses?.message||'Não foi possível consultar sua autorização.');
+        if(!access||access.revoked)throw new Error('Este link é inválido ou foi revogado.');
+        playerAccessId=access.id;playerAccessCampaignId=access.campaign_id;
+        const sheetResponse=await fetch(base+'campaign_player_sheets?select=sheet_data,updated_at&access_id=eq.'+playerAccessId+'&limit=1',{headers:guestRequestHeaders()});
+        const sheets=await sheetResponse.json().catch(()=>[]);
+        if(!sheetResponse.ok)throw new Error(sheets?.message||'Não foi possível carregar sua ficha.');
+        return {player_name:access.player_name,sheet_data:sheets?.[0]?.sheet_data??null,updated_at:sheets?.[0]?.updated_at??null};
+      }
+      if(action==='claim'){
+        const response=await fetch(base+'campaign_player_access?id=eq.'+playerAccessId+'&player_name=eq.Aguardando%20jogador',{method:'PATCH',headers:guestRequestHeaders({Prefer:'return=representation'}),body:JSON.stringify({player_name:payload?.player_name||''})});
+        const rows=await response.json().catch(()=>[]);
+        if(!response.ok)throw new Error(rows?.message||'Não foi possível vincular seu nome.');
+        if(!rows?.length)throw new Error('Este acesso já foi vinculado. Atualize a página ou peça ajuda ao mestre.');
+        return {player_name:rows[0].player_name,sheet_data:null};
+      }
+      if(action==='save'){
+        const response=await fetch(base+'campaign_player_sheets?on_conflict=access_id',{method:'POST',headers:guestRequestHeaders({Prefer:'resolution=merge-duplicates,return=representation'}),body:JSON.stringify({access_id:playerAccessId,campaign_id:playerAccessCampaignId,player_name:guestPlayerName,sheet_data:payload?.sheet_data||{}})});
+        const rows=await response.json().catch(()=>[]);
+        if(!response.ok)throw new Error(rows?.message||'Não foi possível salvar a ficha na nuvem.');
+        return {ok:true,updated_at:rows?.[0]?.updated_at??new Date().toISOString()};
+      }
+      throw new Error('Ação inválida.');
     }
     async function cloudOpenGuest(){
       cloudShow('guest');cloudMessage('Validando o link individual do jogador...');
       try{
-        const result=await cloudGuestRequest('load');guestPlayerName=result.player_name||'Jogador';
-        activeStorageKey=STORAGE_KEY+'-guest-'+playerAccessToken.slice(0,12);
-        if(result.sheet_data)app=normalizeApp(result.sheet_data);
-        else {const first=freshCharacter('AGENTE');app={characters:[first],activeId:first.id};}
-        updateIdentity();
-        ['newCharacter','duplicateCharacter','deleteCharacter','characterSelect','importCharacter','shareCharacter'].forEach(id=>$(id).classList.add('cloud-hidden'));
-        $('cloudCurrentLabel').textContent='Jogador autorizado · '+guestPlayerName;
-        $('cloudGate').classList.add('cloud-hidden');$('cloudTopbar').classList.add('cloud-hidden');$('appShell').classList.remove('cloud-hidden');
-        $('saveState').textContent='● CONECTADO · '+guestPlayerName;$('saveState').style.color='var(--green)';
-        cloudMessage('Acesso autorizado. Suas alterações são sincronizadas automaticamente com o mestre.');
-        if(!result.sheet_data)scheduleGuestSave();
-      }catch(err){cloudShow('guest');cloudMessage('Este link é inválido, foi revogado ou expirou. Peça ao mestre um novo acesso.');console.warn(err);}
+        const result=await cloudGuestRequest('load');
+        if(result.player_name==='Aguardando jogador'){
+          cloudMessage('Seu acesso foi liberado pelo mestre. Digite seu nome para abrir a ficha.');
+          $('cloudGuestName').focus();return;
+        }
+        await cloudFinishGuest(result);
+      }catch(err){cloudShow('guest');$('cloudGuestEntry').classList.add('cloud-hidden');cloudMessage('Este link é inválido, foi revogado ou expirou. Peça ao mestre um novo acesso.');console.warn(err);}
+    }
+    async function cloudClaimGuestName(){
+      const name=$('cloudGuestName').value.trim();
+      if(!name){cloudMessage('Digite seu nome para continuar.');$('cloudGuestName').focus();return;}
+      cloudMessage('Vinculando seu nome à ficha...');
+      try{const result=await cloudGuestRequest('claim',{player_name:name});await cloudFinishGuest(result);}
+      catch(err){cloudMessage(err.message||'Não foi possível vincular seu nome. Peça ajuda ao mestre.');}
+    }
+    async function cloudFinishGuest(result){
+      guestPlayerName=result.player_name||'Jogador';
+      activeStorageKey=STORAGE_KEY+'-guest-'+playerAccessToken.slice(0,12);
+      if(result.sheet_data)app=normalizeApp(result.sheet_data);
+      else {const first=freshCharacter('AGENTE');app={characters:[first],activeId:first.id};}
+      updateIdentity();
+      ['newCharacter','duplicateCharacter','deleteCharacter','characterSelect','importCharacter','shareCharacter'].forEach(id=>$(id).classList.add('cloud-hidden'));
+      $('cloudCurrentLabel').textContent='Jogador autorizado · '+guestPlayerName;
+      $('cloudGate').classList.add('cloud-hidden');$('cloudTopbar').classList.add('cloud-hidden');$('appShell').classList.remove('cloud-hidden');
+      $('saveState').textContent='● CONECTADO · '+guestPlayerName;$('saveState').style.color='var(--green)';
+      cloudMessage('Acesso autorizado. Suas alterações são sincronizadas automaticamente com o mestre.');
+      if(!result.sheet_data)scheduleGuestSave();
     }
     async function scheduleGuestSave(){
       clearTimeout(guestSaveTimer);guestSaveTimer=setTimeout(async()=>{
         if(!playerAccessToken)return;
         if(guestSaving){guestSavePending=true;return;}
         guestSaving=true;$('saveState').textContent='● SINCRONIZANDO...';
-        try{await cloudGuestRequest('save',app);$('saveState').textContent='● SINCRONIZADO COM O MESTRE';$('saveState').style.color='var(--green)';}
+        try{await cloudGuestRequest('save',{sheet_data:app});$('saveState').textContent='● SINCRONIZADO COM O MESTRE';$('saveState').style.color='var(--green)';}
         catch(err){$('saveState').textContent='● ERRO AO SINCRONIZAR';$('saveState').style.color='#e6a080';cloudMessage('Falha ao sincronizar: '+(err.message||err));}
         finally{guestSaving=false;if(guestSavePending){guestSavePending=false;scheduleGuestSave();}}
       },500);
@@ -793,7 +840,7 @@
       if(!window.supabase?.createClient){cloudShow('auth');cloudMessage('Não foi possível carregar o serviço de sincronização. Verifique sua conexão e atualize a página.');return;}
       cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLIC_KEY);
       $('cloudLogin').onclick=()=>cloudSignIn(false);$('cloudSignup').onclick=()=>cloudSignIn(true);
-      $('cloudCreateCampaign').onclick=cloudCreateCampaign;$('cloudCreatePlayerAccess').onclick=cloudCreatePlayerAccess;
+      $('cloudCreateCampaign').onclick=cloudCreateCampaign;$('cloudCreatePlayerAccess').onclick=cloudCreatePlayerAccess;$('cloudGuestEnter').onclick=cloudClaimGuestName;
       $('cloudLogout').onclick=cloudSignOut;$('cloudSignOutTop').onclick=cloudSignOut;
       $('cloudContinueOffline').onclick=()=>cloudShow('hidden');$('cloudOpenDashboard').onclick=cloudOpenMaster;$('cloudOpenCampaign').onclick=()=>{cloudShow('campaign');};
       $('cloudBackToCampaign').onclick=()=>cloudShow('campaign');$('cloudRefresh').onclick=cloudRefreshSheets;
@@ -950,8 +997,7 @@
           const current=Number(obj[key]||4);const nearest=DIE_SIDES.reduce((best,value)=>Math.abs(value-current)<Math.abs(best-current)?value:best,DIE_SIDES[0]);
           const index=DIE_SIDES.indexOf(nearest);obj[key]=DIE_SIDES[Math.max(0,Math.min(DIE_SIDES.length-1,index+Number(step.dataset.delta)))];
         } else obj[key]=clampNumber(Number(obj[key])+Number(step.dataset.delta));
-        const input=document.querySelector(`[data-path="${path}"]`);input.value=obj[key];updateSkillDice();save();
-      }
+        const input=document.querySelector(`[data-path="${path}"]`);input.value=obj[key];updateSkillDice();save();      }
       const remove=e.target.closest('[data-remove-skill]');
       if(remove){active().skills.splice(Number(remove.dataset.removeSkill),1);renderSkills();updateSkillDice();save();}
       const slot=e.target.closest('[data-slot]');
@@ -997,7 +1043,8 @@
       const blob=new Blob([documentText],{type:'text/html;charset=utf-8'});
       const filename=safeFileName(active().name);
       let file=null;
-      try { file=new File([blob],filename,{type:'text/html'}); } catch(err) { /* Navegadores antigos: o Blob continua disponível para download. */ }      return {blob,file,filename};
+      try { file=new File([blob],filename,{type:'text/html'}); } catch(err) { /* Navegadores antigos: o Blob continua disponível para download. */ }
+      return {blob,file,filename};
     }
     function downloadBlob(blob,filename){
       const url=URL.createObjectURL(blob);
