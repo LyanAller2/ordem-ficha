@@ -733,7 +733,7 @@
     let cloudClient=null, cloudUser=null, cloudCampaign=null, cloudRole=null, cloudChannel=null, cloudSaveTimer=null, cloudSaving=false;
     let cloudViewingAccessId=null, cloudMasterReturnState=null, masterViewingSheet=false;
     let masterSheetSaveTimer=null, masterSheetSaving=false, masterSheetSavePending=false;
-    let playerAccessToken=null, playerAccessId=null, playerAccessCampaignId=null, guestPlayerName='', guestSaveTimer=null, guestSaving=false, guestSavePending=false;
+    let playerAccessToken=null, playerAccessId=null, playerAccessCampaignId=null, guestPlayerName='', guestSaveTimer=null, guestSaving=false, guestSavePending=false, guestLastUpdatedAt=null, guestSyncPollTimer=null;
     const SUPABASE_URL='https://wewxhztsjcnjzsproozd.supabase.co';
     const SUPABASE_PUBLIC_KEY='sb_publishable_QXN11JTAx_h6lSE0MHNA4Q_20nnUPn8';
     function save(){
@@ -838,7 +838,16 @@
       cloudShow('dashboard');
       if(cloudChannel) await cloudClient.removeChannel(cloudChannel);
       cloudChannel=cloudClient.channel('campaign-player-sheets-'+cloudCampaign.id)
-        .on('postgres_changes',{event:'*',schema:'public',table:'campaign_player_sheets',filter:'campaign_id=eq.'+cloudCampaign.id},()=>cloudRefreshSheets())
+        .on('postgres_changes',{event:'*',schema:'public',table:'campaign_player_sheets',filter:'campaign_id=eq.'+cloudCampaign.id},payload=>{
+          cloudRefreshSheets();
+          if(payload.eventType==='UPDATE' && masterViewingSheet && cloudViewingAccessId===payload.new?.access_id && !masterSheetSaving && !masterSheetSaveTimer && payload.new?.sheet_data){
+            app=normalizeApp(payload.new.sheet_data);
+            applyVisualSettings();
+            updateIdentity();
+            $('saveState').textContent='● ALTERAÇÃO RECEBIDA EM TEMPO REAL';
+            $('saveState').style.color='var(--green)';
+          }
+        })
         .on('postgres_changes',{event:'*',schema:'public',table:'campaign_player_access',filter:'campaign_id=eq.'+cloudCampaign.id},()=>cloudRefreshSheets())
         .subscribe(status=>{
           $('cloudRealtimeStatus').textContent=status==='SUBSCRIBED'?'● AO VIVO · FICHAS E ACESSOS ATUALIZADOS AUTOMATICAMENTE':'Conectando: '+status;
@@ -930,6 +939,7 @@
     function scheduleMasterSheetSave(){
       clearTimeout(masterSheetSaveTimer);
       masterSheetSaveTimer=setTimeout(async()=>{
+        masterSheetSaveTimer=null;
         if(!masterViewingSheet || !cloudViewingAccessId || !cloudClient || !cloudUser) return;
         if(masterSheetSaving){masterSheetSavePending=true;return;}
         masterSheetSaving=true;
@@ -1004,7 +1014,7 @@
         return {player_name:rows[0].player_name,sheet_data:null};
       }
       if(action==='save'){
-        const response=await fetch(base+'campaign_player_sheets?on_conflict=access_id',{method:'POST',headers:guestRequestHeaders({Prefer:'resolution=merge-duplicates,return=representation'}),body:JSON.stringify({access_id:playerAccessId,campaign_id:playerAccessCampaignId,player_name:guestPlayerName,sheet_data:payload?.sheet_data||{}})});
+        const response=await fetch(base+'campaign_player_sheets?on_conflict=access_id',{method:'POST',headers:guestRequestHeaders({Prefer:'resolution=merge-duplicates,return=representation'}),body:JSON.stringify({access_id:playerAccessId,campaign_id:playerAccessCampaignId,player_name:guestPlayerName,sheet_data:payload?.sheet_data||{},updated_at:new Date().toISOString()})});
         const rows=await response.json().catch(()=>[]);
         if(!response.ok)throw new Error(rows?.message||'Não foi possível salvar a ficha na nuvem.');
         return {ok:true,updated_at:rows?.[0]?.updated_at??new Date().toISOString()};
@@ -1040,14 +1050,38 @@
       $('cloudGate').classList.add('cloud-hidden');$('cloudTopbar').classList.add('cloud-hidden');$('appShell').classList.remove('cloud-hidden');
       $('saveState').textContent='● CONECTADO · '+guestPlayerName;$('saveState').style.color='var(--green)';
       cloudMessage('Acesso autorizado. Suas alterações são sincronizadas automaticamente com o mestre.');
+      guestLastUpdatedAt=result.updated_at||null;
+      startGuestLiveSync();
       if(!result.sheet_data)scheduleGuestSave();
+    }
+    function startGuestLiveSync(){
+      if(guestSyncPollTimer)clearInterval(guestSyncPollTimer);
+      guestSyncPollTimer=setInterval(async()=>{
+        if(!playerAccessToken || !playerAccessId || guestSaving || guestSaveTimer) return;
+        try{
+          const response=await fetch(SUPABASE_URL+'/rest/v1/campaign_player_sheets?select=sheet_data,updated_at&access_id=eq.'+playerAccessId+'&limit=1',{headers:guestRequestHeaders()});
+          if(!response.ok)return;
+          const rows=await response.json();
+          const row=rows?.[0];
+          if(!row?.sheet_data || !row.updated_at || row.updated_at===guestLastUpdatedAt)return;
+          const incomingTime=Date.parse(row.updated_at),knownTime=Date.parse(guestLastUpdatedAt||0);
+          if(Number.isFinite(incomingTime) && incomingTime>knownTime){
+            app=normalizeApp(row.sheet_data);
+            guestLastUpdatedAt=row.updated_at;
+            applyVisualSettings();
+            updateIdentity();
+            $('saveState').textContent='● FICHA ATUALIZADA PELO MESTRE';
+            $('saveState').style.color='var(--green)';
+          }
+        }catch(err){/* mantém a ficha utilizável; tenta novamente no próximo ciclo */}
+      },1200);
     }
     async function scheduleGuestSave(){
       clearTimeout(guestSaveTimer);guestSaveTimer=setTimeout(async()=>{
         if(!playerAccessToken)return;
         if(guestSaving){guestSavePending=true;return;}
         guestSaving=true;$('saveState').textContent='● SINCRONIZANDO...';
-        try{await cloudGuestRequest('save',{sheet_data:app});$('saveState').textContent='● SINCRONIZADO COM O MESTRE';$('saveState').style.color='var(--green)';}
+        try{const saved=await cloudGuestRequest('save',{sheet_data:app});guestLastUpdatedAt=saved.updated_at||guestLastUpdatedAt;$('saveState').textContent='● SINCRONIZADO COM O MESTRE';$('saveState').style.color='var(--green)';}
         catch(err){$('saveState').textContent='● ERRO AO SINCRONIZAR';$('saveState').style.color='#e6a080';cloudMessage('Falha ao sincronizar: '+(err.message||err));}
         finally{guestSaving=false;if(guestSavePending){guestSavePending=false;scheduleGuestSave();}}
       },500);
