@@ -1078,6 +1078,7 @@
     }
     async function scheduleGuestSave(){
       clearTimeout(guestSaveTimer);guestSaveTimer=setTimeout(async()=>{
+        guestSaveTimer=null;
         if(!playerAccessToken)return;
         if(guestSaving){guestSavePending=true;return;}
         guestSaving=true;$('saveState').textContent='● SINCRONIZANDO...';
