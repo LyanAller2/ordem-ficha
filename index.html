@@ -632,7 +632,9 @@
       $('cloudCampaignArea').classList.toggle('cloud-hidden',which!=='campaign');
       $('cloudDashboard').classList.toggle('cloud-hidden',which!=='dashboard');
       $('cloudGate').classList.toggle('cloud-hidden',which==='hidden');
-      $('cloudTopbar').classList.toggle('cloud-hidden',which!=='hidden');
+      $('cloudTopbar').classList.toggle('cloud-hidden',which!=='hidden'||!cloudUser||!cloudCampaign);
+      $('cloudOpenDashboard').classList.toggle('cloud-hidden',!cloudUser||cloudRole!=='owner');
+      $('cloudOpenCampaign').classList.toggle('cloud-hidden',!cloudUser||!cloudCampaign);
       $('appShell').classList.toggle('cloud-hidden',which==='dashboard'||which==='auth');
     }
     function randomInvite(){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let out='ORDEM-'; for(let i=0;i<5;i++) out+=chars[Math.floor(Math.random()*chars.length)]; return out; }
@@ -738,7 +740,6 @@ ${c.notes||'—'}`];
       $('cloudLogout').onclick=cloudSignOut;$('cloudSignOutTop').onclick=cloudSignOut;
       $('cloudContinueOffline').onclick=()=>cloudShow('hidden');$('cloudOpenDashboard').onclick=cloudOpenMaster;$('cloudOpenCampaign').onclick=()=>{cloudShow('campaign');};
       $('cloudBackToCampaign').onclick=()=>cloudShow('campaign');$('cloudRefresh').onclick=cloudRefreshSheets;
-      cloudClient.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_IN'&&session?.user){cloudUser=session.user;setTimeout(()=>cloudAfterLogin(),0);}});
       cloudClient.auth.getSession().then(({data})=>{if(data.session){cloudUser=data.session.user;cloudAfterLogin();}else cloudShow('auth');});
     }
     function setPath(object,path,value){ const parts=path.split('.'); let target=object; for(let i=0;i<parts.length-1;i++) target=target[parts[i]]; target[parts.at(-1)]=value; }
@@ -996,8 +997,8 @@ ${c.notes||'—'}`];
       if(!parsed.hostname || parsed.username || parsed.password) throw new Error('Endereço do site inválido.');
       parsed.hash='';
       // GitHub Pages costuma usar a pasta do repositório. Garante a barra final
-      // para não gerar links para uma rota relativa errada.
-      if(!/\.html?$/i.test(parsed.pathname) && !parsed.pathname.endsWith('/')) parsed.pathname+='/';      return parsed.toString();
+      // para não gerar links para uma rota relativa errada.      if(!/\.html?$/i.test(parsed.pathname) && !parsed.pathname.endsWith('/')) parsed.pathname+='/';
+      return parsed.toString();
     }
     function buildShareUrl(base){
       const shareUrl=new URL(base);
