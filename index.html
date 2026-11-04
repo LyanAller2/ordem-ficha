@@ -245,29 +245,37 @@
 <body>
 
   <section class="cloud-gate" id="cloudGate">
-    <h2>Conexão da campanha</h2>
-    <p>Entre com sua conta para sincronizar fichas pela internet. Cada jogador edita apenas a própria ficha; o mestre pode visualizar todas as fichas da campanha.</p>
+    <h2>Área do Mestre</h2>
+    <p>Entre na sua conta de mestre para administrar a campanha. Jogadores não precisam criar conta, informar e-mail ou senha: cada um recebe um link individual autorizado por você.</p>
     <div id="cloudAuthArea" class="cloud-grid">
       <div class="cloud-box">
-        <h3>Entrar ou criar conta</h3>
-        <label for="cloudEmail">E-mail</label><input id="cloudEmail" type="email" autocomplete="email" placeholder="seu@email.com">
-        <label for="cloudPassword">Senha</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Mínimo de 6 caracteres">
-        <div class="cloud-actions"><button class="action primary" id="cloudLogin">ENTRAR</button><button class="action" id="cloudSignup">CRIAR CONTA</button></div>
+        <h3>Conta do mestre</h3>
+        <label for="cloudEmail">E-mail do mestre</label><input id="cloudEmail" type="email" autocomplete="email" placeholder="seu@email.com">
+        <label for="cloudPassword">Senha</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Sua senha">
+        <div class="cloud-actions"><button class="action primary" id="cloudLogin">ENTRAR</button><button class="action" id="cloudSignup">CRIAR CONTA DE MESTRE</button></div>
       </div>
-      <div class="cloud-box"><h3>Já tem uma conta?</h3><p>Faça login. Depois você poderá criar uma campanha como mestre ou entrar usando o código enviado pelo mestre.</p><p>Se o Supabase pedir confirmação por e-mail, confirme antes de entrar.</p></div>
+      <div class="cloud-box"><h3>Acesso dos jogadores</h3><p>Os jogadores não usam esta tela. Você libera um acesso individual para cada pessoa no painel da campanha e envia o link correspondente.</p></div>
     </div>
     <div id="cloudCampaignArea" class="cloud-hidden">
       <p id="cloudWelcome"></p>
-      <div class="cloud-grid">
-        <div class="cloud-box"><h3>Criar campanha (mestre)</h3><label for="cloudCampaignName">Nome da campanha</label><input id="cloudCampaignName" maxlength="60" value="Minha campanha"><div class="cloud-actions"><button class="action primary" id="cloudCreateCampaign">CRIAR CAMPANHA</button></div></div>
-        <div class="cloud-box"><h3>Entrar em campanha (jogador)</h3><label for="cloudInviteCode">Código do mestre</label><input id="cloudInviteCode" maxlength="20" placeholder="Ex.: ORDEM-7K2P"><div class="cloud-actions"><button class="action primary" id="cloudJoinCampaign">ENTRAR NA CAMPANHA</button></div></div>
-      </div>
-      <div id="cloudCampaignInfo"></div>
+      <div class="cloud-box"><h3>Criar campanha</h3><label for="cloudCampaignName">Nome da campanha</label><input id="cloudCampaignName" maxlength="60" value="Minha campanha"><div class="cloud-actions"><button class="action primary" id="cloudCreateCampaign">CRIAR CAMPANHA</button></div></div>
       <div class="cloud-actions"><button class="action" id="cloudLogout">SAIR DA CONTA</button><button class="action" id="cloudContinueOffline">CONTINUAR SEM NUVEM</button></div>
     </div>
     <div id="cloudDashboard" class="cloud-hidden">
       <div class="cloud-player-head"><h3 id="cloudDashboardTitle">Painel do Mestre</h3><span id="cloudRealtimeStatus" class="cloud-status">Conectando...</span></div>
       <p id="cloudInviteDisplay"></p>
+      <section class="cloud-box" style="margin:12px 0">
+        <h3>Liberar acesso para jogador</h3>
+        <label for="cloudPlayerName">Nome do jogador</label>
+        <input id="cloudPlayerName" maxlength="60" placeholder="Ex.: Rafael">
+        <div class="cloud-actions"><button class="action primary" id="cloudCreatePlayerAccess">GERAR LINK INDIVIDUAL</button></div>
+        <div id="cloudAccessResult" class="cloud-hidden" style="margin-top:12px">
+          <p class="cloud-status">Link criado. Copie e envie somente para esse jogador:</p>
+          <input id="cloudAccessUrl" aria-label="Link individual do jogador" readonly>
+          <div class="cloud-actions"><button class="action" id="cloudCopyAccess">COPIAR LINK</button></div>
+        </div>
+      </section>
+      <h3>Acessos liberados e fichas</h3>
       <div id="cloudPlayers" class="cloud-list"></div>
       <div class="cloud-actions"><button class="action" id="cloudBackToCampaign">VOLTAR</button><button class="action" id="cloudRefresh">ATUALIZAR FICHAS</button></div>
     </div>
@@ -621,10 +629,14 @@
     const active=()=>app.characters.find(c=>c.id===app.activeId) || app.characters[0];
     function showToast(message){ const el=$('toast'); el.textContent=message; el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),2300); }
     let cloudClient=null, cloudUser=null, cloudCampaign=null, cloudRole=null, cloudChannel=null, cloudSaveTimer=null, cloudSaving=false;
+    let playerAccessToken=null, guestPlayerName='', guestSaveTimer=null, guestSaving=false, guestSavePending=false;
+    const SUPABASE_URL='https://wewxhztsjcnjzsproozd.supabase.co';
+    const SUPABASE_PUBLIC_KEY='sb_publishable_QXN11JTAx_h6lSE0MHNA4Q_20nnUPn8';
     function save(){
       try { localStorage.setItem(activeStorageKey,JSON.stringify(app)); $('saveState').textContent='● SALVO NESTE NAVEGADOR'; $('saveState').style.color='var(--green)'; }
       catch(err){ $('saveState').textContent='● EXPORTAR PARA NÃO PERDER'; $('saveState').style.color='#e6a080'; }
-      if(cloudClient && cloudUser && cloudCampaign && cloudRole==='player') scheduleCloudSave();
+      if(playerAccessToken) scheduleGuestSave();
+      else if(cloudClient && cloudUser && cloudCampaign && cloudRole==='player') scheduleCloudSave();
     }
     function cloudMessage(msg){ const el=$('cloudMessage'); if(el) el.textContent=msg||''; }
     function cloudShow(which){
@@ -635,89 +647,136 @@
       $('cloudTopbar').classList.toggle('cloud-hidden',which!=='hidden'||!cloudUser||!cloudCampaign);
       $('cloudOpenDashboard').classList.toggle('cloud-hidden',!cloudUser||cloudRole!=='owner');
       $('cloudOpenCampaign').classList.toggle('cloud-hidden',!cloudUser||!cloudCampaign);
-      $('appShell').classList.toggle('cloud-hidden',which==='dashboard'||which==='auth');
+      $('appShell').classList.toggle('cloud-hidden',['dashboard','auth','campaign','guest'].includes(which));
     }
     function randomInvite(){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let out='ORDEM-'; for(let i=0;i<5;i++) out+=chars[Math.floor(Math.random()*chars.length)]; return out; }
     async function cloudSignIn(signup){
       const email=$('cloudEmail').value.trim(), password=$('cloudPassword').value;
-      if(!email || password.length<6){cloudMessage('Informe um e-mail válido e uma senha com pelo menos 6 caracteres.');return;}
-      cloudMessage(signup?'Criando conta...':'Entrando...');
+      if(!email || password.length<6){cloudMessage('Informe o e-mail e uma senha com pelo menos 6 caracteres.');return;}
+      cloudMessage(signup?'Criando conta do mestre...':'Entrando...');
       const result=signup?await cloudClient.auth.signUp({email,password}):await cloudClient.auth.signInWithPassword({email,password});
       if(result.error){cloudMessage(result.error.message);return;}
-      if(signup && !result.data.session){cloudMessage('Conta criada! Confirme o e-mail enviado pelo Supabase e depois faça login.');return;}
+      if(signup && !result.data.session){cloudMessage('Conta do mestre criada. Confirme o e-mail do mestre e depois entre. Jogadores não precisam fazer isso.');return;}
       cloudUser=result.data.user; await cloudAfterLogin();
     }
     async function cloudAfterLogin(){
       const {data:{user}}=await cloudClient.auth.getUser(); cloudUser=user;
       if(!cloudUser){cloudShow('auth');return;}
-      $('cloudWelcome').textContent='Conectado como '+cloudUser.email+'. Escolha criar uma campanha ou entrar com um código.';
-      cloudShow('campaign'); cloudMessage('Conta conectada.');
-      const {data:owned}=await cloudClient.from('campaigns').select('*').eq('owner_id',cloudUser.id).order('created_at',{ascending:false});
+      $('cloudWelcome').textContent='Mestre conectado. Crie sua campanha para liberar acessos individuais.';
+      cloudShow('campaign'); cloudMessage('Conta do mestre conectada.');
+      const {data:owned,error}=await cloudClient.from('campaigns').select('*').eq('owner_id',cloudUser.id).order('created_at',{ascending:false});
+      if(error){cloudMessage('Não foi possível carregar suas campanhas: '+error.message);return;}
       if(owned?.length){ cloudCampaign=owned[0]; cloudRole='owner'; await cloudOpenMaster(); return; }
-      const {data:members}=await cloudClient.from('campaign_members').select('campaign_id,role,campaigns(*)').eq('user_id',cloudUser.id).limit(1);
-      if(members?.length){cloudCampaign=members[0].campaigns;cloudRole='player';await cloudOpenPlayer();return;}
     }
     async function cloudCreateCampaign(){
       const name=$('cloudCampaignName').value.trim()||'Minha campanha'; const code=randomInvite(); cloudMessage('Criando campanha...');
       const {data,error}=await cloudClient.from('campaigns').insert({name,invite_code:code,owner_id:cloudUser.id}).select().single();
       if(error){cloudMessage(error.message);return;} cloudCampaign=data;cloudRole='owner';await cloudOpenMaster();
     }
-    async function cloudJoinCampaign(){
-      const code=$('cloudInviteCode').value.trim(); if(!code){cloudMessage('Digite o código enviado pelo mestre.');return;}
-      cloudMessage('Entrando na campanha...');
-      const {data:campaignId,error}=await cloudClient.rpc('join_campaign_by_code',{p_code:code});
-      if(error){cloudMessage(error.message);return;}
-      const {data:campaign,error:campaignError}=await cloudClient.from('campaigns').select('*').eq('id',campaignId).single();
-      if(campaignError){cloudMessage(campaignError.message);return;} cloudCampaign=campaign;cloudRole='player';
-      await cloudOpenPlayer();
-    }
     function normalizeApp(value){const chars=Array.isArray(value?.characters)?value.characters.map(normalizeCharacter):[];if(!chars.length)chars.push(freshCharacter());return {characters:chars,activeId:value?.activeId&&chars.some(c=>c.id===value.activeId)?value.activeId:chars[0].id};}
-    async function cloudOpenPlayer(){
-      if(cloudChannel){await cloudClient.removeChannel(cloudChannel);cloudChannel=null;}
-      const {data:existing,error:readError}=await cloudClient.from('character_sheets').select('*').eq('campaign_id',cloudCampaign.id).eq('user_id',cloudUser.id).maybeSingle();
-      if(readError){cloudMessage('Não foi possível carregar sua ficha: '+readError.message);cloudShow('campaign');return;}
-      if(existing?.sheet_data){app=normalizeApp(existing.sheet_data);updateIdentity();}
-      else {const {error:insertError}=await cloudClient.from('character_sheets').insert({campaign_id:cloudCampaign.id,user_id:cloudUser.id,character_name:active().name||'Sem nome',sheet_data:app});if(insertError){cloudMessage('Não foi possível criar sua ficha: '+insertError.message);cloudShow('campaign');return;}}
-      try{localStorage.setItem(STORAGE_KEY,JSON.stringify(app));}catch(err){}
-      $('cloudCurrentLabel').textContent='Jogador · '+cloudCampaign.name+' · sincronização online';
-      $('cloudOpenDashboard').classList.add('cloud-hidden'); $('cloudOpenCampaign').classList.remove('cloud-hidden');
-      cloudShow('hidden'); cloudMessage('Ficha vinculada à campanha. Suas alterações serão salvas na nuvem automaticamente.');
-      $('saveState').textContent='● SINCRONIZADO COM A CAMPANHA';
+    function createPlayerToken(){
+      const bytes=new Uint8Array(32); crypto.getRandomValues(bytes);
+      let binary=''; bytes.forEach(b=>binary+=String.fromCharCode(b));
+      return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    }
+    async function hashPlayerToken(token){
+      const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token));
+      return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+    }
+    async function cloudCreatePlayerAccess(){
+      const playerName=$('cloudPlayerName').value.trim();
+      if(!playerName){cloudMessage('Digite o nome do jogador que receberá a permissão.');$('cloudPlayerName').focus();return;}
+      if(!cloudCampaign||cloudRole!=='owner'){cloudMessage('Somente o mestre da campanha pode liberar acessos.');return;}
+      cloudMessage('Gerando acesso individual...');
+      try{
+        const token=createPlayerToken(), tokenHash=await hashPlayerToken(token);
+        const {data,error}=await cloudClient.from('campaign_player_access').insert({campaign_id:cloudCampaign.id,player_name:playerName,token_hash:tokenHash}).select('id,player_name').single();
+        if(error)throw error;
+        const link=new URL(location.href); link.hash='jogador='+token;
+        $('cloudAccessUrl').value=link.toString();$('cloudAccessResult').classList.remove('cloud-hidden');
+        $('cloudCopyAccess').onclick=async()=>{
+          const field=$('cloudAccessUrl');
+          try{await navigator.clipboard.writeText(field.value);cloudMessage('Link copiado. Envie somente para '+playerName+'.');}
+          catch(err){field.focus();field.select();cloudMessage('Link selecionado. Use Ctrl+C para copiar e envie somente para '+playerName+'.');}
+        };
+        $('cloudPlayerName').value='';
+        cloudMessage('Acesso criado para '+playerName+'. O link só aparece nesta criação; guarde e envie ao jogador.');
+        await cloudRefreshSheets();
+      }catch(err){cloudMessage('Não foi possível liberar o acesso: '+(err.message||err));}
     }
     async function cloudOpenMaster(){
       $('cloudDashboardTitle').textContent='Painel do Mestre · '+cloudCampaign.name;
-      $('cloudInviteDisplay').textContent='Código para os jogadores: '+cloudCampaign.invite_code+'  ·  Compartilhe somente com seu grupo.';
+      $('cloudInviteDisplay').textContent='Crie um link individual para cada jogador. Você pode revogar qualquer acesso quando quiser.';
       $('cloudOpenDashboard').classList.remove('cloud-hidden'); $('cloudOpenCampaign').classList.add('cloud-hidden');
       cloudShow('dashboard'); await cloudRefreshSheets();
       if(cloudChannel) await cloudClient.removeChannel(cloudChannel);
-      cloudChannel=cloudClient.channel('campaign-sheets-'+cloudCampaign.id).on('postgres_changes',{event:'*',schema:'public',table:'character_sheets',filter:'campaign_id=eq.'+cloudCampaign.id},()=>cloudRefreshSheets()).subscribe(status=>{ $('cloudRealtimeStatus').textContent=status==='SUBSCRIBED'?'● AO VIVO · ATUALIZAÇÃO AUTOMÁTICA':'Conectando: '+status; });
+      cloudChannel=cloudClient.channel('campaign-player-sheets-'+cloudCampaign.id).on('postgres_changes',{event:'*',schema:'public',table:'campaign_player_sheets',filter:'campaign_id=eq.'+cloudCampaign.id},()=>cloudRefreshSheets()).subscribe(status=>{ $('cloudRealtimeStatus').textContent=status==='SUBSCRIBED'?'● AO VIVO · ATUALIZAÇÃO AUTOMÁTICA':'Conectando: '+status; });
     }
     async function cloudRefreshSheets(){
-      if(!cloudCampaign)return; const host=$('cloudPlayers'); host.innerHTML='<p>Carregando fichas...</p>';
-      const {data,error}=await cloudClient.from('character_sheets').select('id,user_id,character_name,sheet_data,updated_at').eq('campaign_id',cloudCampaign.id).order('updated_at',{ascending:false});
-      if(error){host.textContent='Erro ao carregar fichas: '+error.message;return;}
-      host.innerHTML=''; if(!data?.length){host.innerHTML='<p>Nenhuma ficha ainda. Quando um jogador entrar pelo código da campanha, a ficha aparecerá aqui.</p>';return;}
-      data.forEach((row,index)=>{
-        const pack=normalizeApp(row.sheet_data); const c=pack.characters.find(x=>x.id===pack.activeId)||pack.characters[0];
+      if(!cloudCampaign)return; const host=$('cloudPlayers'); host.innerHTML='<p>Carregando acessos...</p>';
+      const {data,error}=await cloudClient.from('campaign_player_access').select('id,player_name,revoked,created_at,last_used_at,campaign_player_sheets(id,player_name,sheet_data,updated_at)').eq('campaign_id',cloudCampaign.id).order('created_at',{ascending:true});
+      if(error){host.textContent='Erro ao carregar acessos: '+error.message;return;}
+      host.innerHTML=''; if(!data?.length){host.innerHTML='<p>Nenhum jogador autorizado ainda. Use o formulário acima para liberar o primeiro acesso.</p>';return;}
+      data.forEach(access=>{
+        const sheets=Array.isArray(access.campaign_player_sheets)?access.campaign_player_sheets:[];
+        const sheet=sheets[0]||null;
         const el=document.createElement('article');el.className='cloud-player';
         const head=document.createElement('div');head.className='cloud-player-head';
-        const title=document.createElement('strong');title.textContent=c.name||row.character_name||'Agente';
-        const btn=document.createElement('button');btn.className='action';btn.textContent='VER FICHA';btn.addEventListener('click',()=>cloudShowSheet(row));
-        head.append(title,btn);el.append(head);
-        const meta=document.createElement('p');meta.textContent='Classe: '+(c.role||'—')+' · Profissão: '+(c.profession||'—')+' · Atualizada: '+new Date(row.updated_at).toLocaleString('pt-BR');el.append(meta);
-        host.append(el);
+        const title=document.createElement('strong');title.textContent=access.player_name;
+        const actions=document.createElement('div');actions.className='cloud-actions';
+        if(sheet){const btn=document.createElement('button');btn.className='action';btn.textContent='VER FICHA';btn.addEventListener('click',()=>cloudShowSheet(access,sheet));actions.append(btn);}
+        if(!access.revoked){const revoke=document.createElement('button');revoke.className='action danger';revoke.textContent='REVOGAR ACESSO';revoke.addEventListener('click',()=>cloudRevokePlayerAccess(access.id,access.player_name));actions.append(revoke);}
+        head.append(title,actions);el.append(head);
+        const meta=document.createElement('p');
+        meta.textContent=access.revoked?'Acesso revogado.':sheet?'Ficha atualizada: '+new Date(sheet.updated_at).toLocaleString('pt-BR'):'Aguardando o jogador abrir o link individual.';
+        el.append(meta);host.append(el);
       });
     }
-    function cloudShowSheet(row){
-      const pack=normalizeApp(row.sheet_data);const c=pack.characters.find(x=>x.id===pack.activeId)||pack.characters[0];
+    async function cloudRevokePlayerAccess(id,name){
+      if(!confirm('Revogar o acesso de '+name+'? A pessoa não conseguirá mais abrir ou sincronizar esta ficha.'))return;
+      const {error}=await cloudClient.from('campaign_player_access').update({revoked:true}).eq('id',id).eq('campaign_id',cloudCampaign.id);
+      if(error){cloudMessage('Não foi possível revogar o acesso: '+error.message);return;}
+      cloudMessage('Acesso de '+name+' revogado.');await cloudRefreshSheets();
+    }
+    function cloudShowSheet(access,sheet){
+      const pack=normalizeApp(sheet.sheet_data);const c=pack.characters.find(x=>x.id===pack.activeId)||pack.characters[0];
       const host=$('cloudPlayers');host.innerHTML='';
       const card=document.createElement('article');card.className='cloud-player';
-      const head=document.createElement('div');head.className='cloud-player-head';const title=document.createElement('strong');title.textContent=c.name||'Agente';const back=document.createElement('button');back.className='action';back.textContent='VOLTAR À LISTA';back.onclick=cloudRefreshSheets;head.append(title,back);card.append(head);
-      const lines=[`Classe: ${c.role||'—'} | Profissão: ${c.profession||'—'} | Nível: ${c.level}`,`Atributos — Físico: ${c.attributes.physical} · Mente: ${c.attributes.mind} · Emoção: ${c.attributes.emotion}`,`PV: ${c.resources.pv.current}/${c.resources.pv.max} · PD: ${c.resources.pd.current}/${c.resources.pd.max}`,`Habilidade da profissão: ${c.professionAbility.name||'—'}
-${c.professionAbility.description||''}`,`Perícias:
-${c.skills.map(sk=>`${sk.name}: ${sk.die} + ${sk.attribute}`).join('\n')}`,`Anotações:
-${c.notes||'—'}`];
+      const head=document.createElement('div');head.className='cloud-player-head';const title=document.createElement('strong');title.textContent=access.player_name+' · '+(c.name||'Agente');const back=document.createElement('button');back.className='action';back.textContent='VOLTAR À LISTA';back.onclick=cloudRefreshSheets;head.append(title,back);card.append(head);
+      const lines=[`Classe: ${c.role||'—'} | Profissão: ${c.profession||'—'} | Nível: ${c.level}`,`Atributos — Físico: ${c.attributes.physical} · Mente: ${c.attributes.mind} · Emoção: ${c.attributes.emotion}`,`PV: ${c.resources.pv.current}/${c.resources.pv.max} · PD: ${c.resources.pd.current}/${c.resources.pd.max}`,`Habilidade da profissão: ${c.professionAbility.name||'—'}\n${c.professionAbility.description||''}`,`Perícias:\n${c.skills.map(sk=>`${sk.name}: ${sk.die} + ${sk.attribute}`).join('\n')}`,`Anotações:\n${c.notes||'—'}`];
       const detail=document.createElement('div');detail.className='cloud-detail';detail.textContent=lines.join('\n\n');card.append(detail);host.append(card);
+    }
+    async function cloudGuestRequest(action,sheetData){
+      const response=await fetch(SUPABASE_URL+'/functions/v1/player-sheet',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLIC_KEY},body:JSON.stringify({action,token:playerAccessToken,...(sheetData?{sheet_data:sheetData}:{})})});
+      const payload=await response.json().catch(()=>({error:'Resposta inválida do servidor.'}));
+      if(!response.ok)throw new Error(payload.error||'Não foi possível validar o link.');
+      return payload;
+    }
+    async function cloudOpenGuest(){
+      cloudShow('guest');cloudMessage('Validando o link individual do jogador...');
+      try{
+        const result=await cloudGuestRequest('load');guestPlayerName=result.player_name||'Jogador';
+        activeStorageKey=STORAGE_KEY+'-guest-'+playerAccessToken.slice(0,12);
+        if(result.sheet_data)app=normalizeApp(result.sheet_data);
+        else {const first=freshCharacter('AGENTE');app={characters:[first],activeId:first.id};}
+        updateIdentity();
+        ['newCharacter','duplicateCharacter','deleteCharacter'].forEach(id=>$(id).classList.add('cloud-hidden'));
+        $('cloudCurrentLabel').textContent='Jogador autorizado · '+guestPlayerName;
+        $('cloudGate').classList.add('cloud-hidden');$('cloudTopbar').classList.add('cloud-hidden');$('appShell').classList.remove('cloud-hidden');
+        $('saveState').textContent='● CONECTADO · '+guestPlayerName;$('saveState').style.color='var(--green)';
+        cloudMessage('Acesso autorizado. Suas alterações são sincronizadas automaticamente com o mestre.');
+        if(!result.sheet_data)scheduleGuestSave();
+      }catch(err){cloudShow('guest');cloudMessage('Este link é inválido, foi revogado ou expirou. Peça ao mestre um novo acesso.');console.warn(err);}
+    }
+    async function scheduleGuestSave(){
+      clearTimeout(guestSaveTimer);guestSaveTimer=setTimeout(async()=>{
+        if(!playerAccessToken)return;
+        if(guestSaving){guestSavePending=true;return;}
+        guestSaving=true;$('saveState').textContent='● SINCRONIZANDO...';
+        try{await cloudGuestRequest('save',app);$('saveState').textContent='● SINCRONIZADO COM O MESTRE';$('saveState').style.color='var(--green)';}
+        catch(err){$('saveState').textContent='● ERRO AO SINCRONIZAR';$('saveState').style.color='#e6a080';cloudMessage('Falha ao sincronizar: '+(err.message||err));}
+        finally{guestSaving=false;if(guestSavePending){guestSavePending=false;scheduleGuestSave();}}
+      },500);
     }
     async function scheduleCloudSave(){
       clearTimeout(cloudSaveTimer);cloudSaveTimer=setTimeout(async()=>{
@@ -729,17 +788,17 @@ ${c.notes||'—'}`];
         }catch(err){cloudMessage('Falha de conexão com a nuvem.');}finally{cloudSaving=false;}
       },450);
     }
-    async function cloudSignOut(){if(cloudChannel)await cloudClient.removeChannel(cloudChannel);cloudChannel=null;cloudUser=null;cloudCampaign=null;cloudRole=null;await cloudClient.auth.signOut();cloudShow('auth');cloudMessage('Você saiu da conta.');}
+    async function cloudSignOut(){if(cloudChannel)await cloudClient.removeChannel(cloudChannel);cloudChannel=null;cloudUser=null;cloudCampaign=null;cloudRole=null;await cloudClient.auth.signOut();cloudShow('auth');cloudMessage('Você saiu da conta do mestre.');}
     function cloudInit(){
-      const url='https://wewxhztsjcnjzsproozd.supabase.co';
-      const key='sb_publishable_QXN11JTAx_h6lSE0MHNA4Q_20nnUPn8';
       if(!window.supabase?.createClient){cloudShow('auth');cloudMessage('Não foi possível carregar o serviço de sincronização. Verifique sua conexão e atualize a página.');return;}
-      cloudClient=window.supabase.createClient(url,key);
+      cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLIC_KEY);
       $('cloudLogin').onclick=()=>cloudSignIn(false);$('cloudSignup').onclick=()=>cloudSignIn(true);
-      $('cloudCreateCampaign').onclick=cloudCreateCampaign;$('cloudJoinCampaign').onclick=cloudJoinCampaign;
+      $('cloudCreateCampaign').onclick=cloudCreateCampaign;$('cloudCreatePlayerAccess').onclick=cloudCreatePlayerAccess;
       $('cloudLogout').onclick=cloudSignOut;$('cloudSignOutTop').onclick=cloudSignOut;
       $('cloudContinueOffline').onclick=()=>cloudShow('hidden');$('cloudOpenDashboard').onclick=cloudOpenMaster;$('cloudOpenCampaign').onclick=()=>{cloudShow('campaign');};
       $('cloudBackToCampaign').onclick=()=>cloudShow('campaign');$('cloudRefresh').onclick=cloudRefreshSheets;
+      const playerMatch=location.hash.match(/(?:^#|&)jogador=([A-Za-z0-9_-]{30,})/);
+      if(playerMatch){playerAccessToken=playerMatch[1];cloudOpenGuest();return;}
       cloudClient.auth.getSession().then(({data})=>{if(data.session){cloudUser=data.session.user;cloudAfterLogin();}else cloudShow('auth');});
     }
     function setPath(object,path,value){ const parts=path.split('.'); let target=object; for(let i=0;i<parts.length-1;i++) target=target[parts[i]]; target[parts.at(-1)]=value; }
@@ -938,8 +997,7 @@ ${c.notes||'—'}`];
       const blob=new Blob([documentText],{type:'text/html;charset=utf-8'});
       const filename=safeFileName(active().name);
       let file=null;
-      try { file=new File([blob],filename,{type:'text/html'}); } catch(err) { /* Navegadores antigos: o Blob continua disponível para download. */ }
-      return {blob,file,filename};
+      try { file=new File([blob],filename,{type:'text/html'}); } catch(err) { /* Navegadores antigos: o Blob continua disponível para download. */ }      return {blob,file,filename};
     }
     function downloadBlob(blob,filename){
       const url=URL.createObjectURL(blob);
@@ -997,7 +1055,8 @@ ${c.notes||'—'}`];
       if(!parsed.hostname || parsed.username || parsed.password) throw new Error('Endereço do site inválido.');
       parsed.hash='';
       // GitHub Pages costuma usar a pasta do repositório. Garante a barra final
-      // para não gerar links para uma rota relativa errada.      if(!/\.html?$/i.test(parsed.pathname) && !parsed.pathname.endsWith('/')) parsed.pathname+='/';
+      // para não gerar links para uma rota relativa errada.
+      if(!/\.html?$/i.test(parsed.pathname) && !parsed.pathname.endsWith('/')) parsed.pathname+='/';
       return parsed.toString();
     }
     function buildShareUrl(base){
