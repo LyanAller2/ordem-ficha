@@ -1,36 +1,1095 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#090909">
-<title>Ficha de Ordem Paranormal</title>
-<style>
-html,body{margin:0;min-height:100%;background:#080909;color:#e9e3dc;font-family:Arial,sans-serif}
-body{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box}
-main{max-width:520px;text-align:center;border:1px solid #8d2e1c;padding:28px;background:#111313}
-h1{font:700 20px Georgia,serif;letter-spacing:.08em;color:#d4c9bd}
-p{font-size:14px;line-height:1.6;color:#b8afa7}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090909">
+  <meta name="description" content="Ficha editável de agente — Ordem Paranormal RPG.">
+  <title>Arquivo de Agentes — Ordem Paranormal</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080909;
+      --panel: rgba(16, 17, 17, .92);
+      --panel2: #111313;
+      --ink: #e9e3dc;
+      --muted: #99918a;
+      --dim: #665d56;
+      --red: #c34425;
+      --red2: #8d2e1c;
+      --redGlow: rgba(195, 68, 37, .16);
+      --line: rgba(195, 68, 37, .72);
+      --lineSoft: rgba(195, 68, 37, .28);
+      --whiteSlot: #eee8df;
+      --emptySlot: #272625;
+      --green: #a7b58a;
+      --radius: 3px;
+    }
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--bg); }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(116, 38, 21, .12), transparent 48%),
+        repeating-linear-gradient(0deg, transparent 0 39px, rgba(255,255,255,.012) 40px),
+        #080909;
+      font-family: Georgia, 'Times New Roman', serif;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(1440px, calc(100% - 34px)); margin: 24px auto 38px; }
+    .frame {
+      position: relative;
+      border: 1px solid var(--line);
+      padding: 13px;
+      background: linear-gradient(135deg, rgba(195,68,37,.035), transparent 25%, transparent 75%, rgba(195,68,37,.035));
+      box-shadow: 0 0 0 5px #090909, 0 0 0 6px rgba(195,68,37,.36), 0 15px 70px rgba(0,0,0,.45);
+    }
+    .frame::before, .frame::after { content:""; position:absolute; pointer-events:none; width:42px; height:42px; border-color:var(--red); border-style:solid; opacity:.8; }
+    .frame::before { top:5px; left:5px; border-width:1px 0 0 1px; }
+    .frame::after { bottom:5px; right:5px; border-width:0 1px 1px 0; }
+    .toolbar {
+      display:flex; justify-content:space-between; align-items:center; gap:14px;
+      border-bottom:1px solid var(--lineSoft); padding:5px 7px 13px; margin-bottom:15px;
+    }
+    .brand { display:flex; flex-direction:column; gap:4px; min-width:190px; }
+    .brand strong { color:#d4c9bd; letter-spacing:.18em; font-size:12px; font-weight:700; }
+    .brand span { color:var(--red); letter-spacing:.22em; font:10px/1.2 Arial,sans-serif; }
+    .toolbar-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:7px; }
+    .toolbar select { max-width:190px; }
+    .action, .toolbar select {
+      min-height:34px; border:1px solid var(--lineSoft); border-radius:2px;
+      color:var(--ink); background:#111313; padding:7px 10px; font:11px Arial,sans-serif; letter-spacing:.06em;
+    }
+    .action:hover { border-color:var(--red); background:#1a1311; }
+    .action.primary { border-color:var(--red); color:#fff0e8; background:linear-gradient(180deg,#8f321e,#682416); }
+    .action.danger { color:#e99b83; }
+    .save-state { font:10px Arial,sans-serif; color:var(--green); letter-spacing:.08em; white-space:nowrap; margin-right:3px; }
+    .identity {
+      display:grid; grid-template-columns:minmax(250px,1fr) minmax(290px,.95fr);
+      gap:18px; align-items:end; padding:7px 10px 19px;
+      border-bottom:1px solid var(--lineSoft); margin-bottom:16px;
+    }
+    .eyebrow { color:var(--red); font:10px Arial,sans-serif; letter-spacing:.2em; text-transform:uppercase; margin-bottom:6px; }
+    .name-input {
+      width:100%; border:0; border-bottom:1px solid var(--line); background:transparent; color:#df6a46;
+      padding:0 0 5px; outline:none; text-transform:uppercase; font-size:clamp(30px,5vw,47px); line-height:1.1;
+      letter-spacing:.035em; font-weight:700;
+    }
+    .identity-meta { display:grid; grid-template-columns:1fr 1fr 100px; gap:12px; }
+    .field-label { display:block; color:var(--muted); font:9px Arial,sans-serif; letter-spacing:.13em; text-transform:uppercase; margin-bottom:5px; }
+    .line-input, .small-number, .text-field, .skill-input, .skill-select {
+      width:100%; color:var(--ink); background:transparent; border:0; border-bottom:1px solid #594036;
+      border-radius:0; outline:none; padding:5px 3px; min-width:0;
+    }
+    .line-input { font-size:16px; text-transform:uppercase; }
+    .line-select { width:100%; color:var(--ink); background:#111313; border:0; border-bottom:1px solid #594036; border-radius:0; outline:none; padding:5px 3px; font-size:15px; text-transform:uppercase; }
+    .line-select option { background:#171717; }
+    .hidden-panel { display:none !important; }
+    .ability-name { width:100%; margin:0 0 10px; color:#e6a18b; background:transparent; border:0; border-bottom:1px solid var(--lineSoft); outline:none; padding:6px 3px; font-size:15px; }
+    .line-input:focus, .name-input:focus, .small-number:focus, .text-field:focus, .skill-input:focus, .skill-select:focus { border-color:#e26c47; background:rgba(195,68,37,.05); }
+    .level-input { color:#fff; text-align:center; font:bold 24px Georgia,serif; border:1px solid var(--red); background:rgba(195,68,37,.12); padding:5px; width:100%; }
+    .main-grid { display:grid; grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr); gap:16px; align-items:start; }
+    .column { display:grid; gap:15px; min-width:0; }
+    .panel { position:relative; background:var(--panel); border:1px solid var(--lineSoft); padding:14px 15px 15px; min-width:0; }
+    .panel::before { content:""; position:absolute; top:-1px; left:14px; width:38px; border-top:2px solid var(--red); }
+    .panel-head { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:12px; }
+    .panel-title { margin:0; color:#e0d5cb; font:bold 15px Georgia,serif; letter-spacing:.11em; text-transform:uppercase; }
+    .panel-kicker { color:var(--red); font:9px Arial,sans-serif; letter-spacing:.13em; }
+    .attributes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+    .attribute-card { border:1px solid rgba(195,68,37,.25); background:rgba(255,255,255,.015); padding:9px 10px; }
+    .attribute-card label { color:#d8ccc1; display:block; text-transform:uppercase; font-size:12px; letter-spacing:.08em; margin-bottom:8px; }
+    .attribute-control { display:flex; align-items:center; gap:5px; }
+    .attribute-control input { width:100%; min-width:0; color:#f0e6dd; background:transparent; border:0; text-align:center; font:bold 25px Georgia,serif; outline:none; }
+    .stepper { border:1px solid var(--lineSoft); color:#d76a48; background:#151312; width:24px; height:26px; line-height:20px; padding:0; }
+    .stepper:hover { background:var(--red2); color:white; }
+    .skills-panel { padding-bottom:12px; }
+    .skill-table { width:100%; }
+    .skill-header, .skill-row { display:grid; grid-template-columns:minmax(115px,1.35fr) minmax(132px,1.15fr) minmax(85px,.9fr) 24px; gap:7px; align-items:center; }
+    .skill-header { color:var(--red); font:9px Arial,sans-serif; letter-spacing:.11em; text-transform:uppercase; padding:0 3px 6px; border-bottom:1px solid var(--lineSoft); }
+    .skill-row { padding:3px 3px; border-bottom:1px solid rgba(255,255,255,.055); }
+    .skill-input, .skill-select { font-size:12px; padding:5px 2px; border-bottom-color:transparent; }
+    .skill-input.name { color:#ded6ce; }
+    .skill-select { color:#c8b8ab; font:10px Arial,sans-serif; min-width:0; width:100%; }
+    .skill-select option, .die-select option { background:#171717; }
+    .dice-pair { display:grid; grid-template-columns:22px minmax(43px,1fr) 9px 22px; align-items:center; gap:4px; min-width:0; }
+    .die-select { color:#f0c0ad; background:#151312; border:1px solid var(--lineSoft); border-radius:2px; width:100%; min-width:0; padding:5px 2px; font:10px Arial,sans-serif; text-align:center; }
+    .die-token { width:22px; height:22px; display:inline-grid; place-items:center; justify-self:center; color:#1a0d09; background:#d75a38; font:bold 10px Arial,sans-serif; line-height:1; flex:none; }
+    .die-token.die-4 { clip-path:polygon(50% 0,100% 100%,0 100%); padding-top:5px; }
+    .die-token.die-6 { clip-path:polygon(0 0,100% 0,100% 100%,0 100%); }
+    .die-token.die-8 { clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); }
+    .die-token.die-10 { clip-path:polygon(50% 0,98% 35%,80% 100%,20% 100%,2% 35%); }
+    .die-token.die-12 { clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%); }
+    .die-token.die-20 { border-radius:50%; }
+    .dice-plus { color:#d77b5d; text-align:center; font:bold 12px Arial,sans-serif; }
+    .remove-skill { border:0; background:transparent; color:#805044; font-size:17px; padding:0; }
+    .remove-skill:hover { color:#ff8a68; }
+    .add-skill { margin-top:10px; border:1px dashed var(--line); color:#d86b4c; background:transparent; padding:7px 11px; font:10px Arial,sans-serif; letter-spacing:.08em; text-transform:uppercase; }
+    .add-skill:hover { background:var(--redGlow); }
+    .resources { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .resource { border:1px solid var(--lineSoft); padding:11px; background:rgba(0,0,0,.16); min-width:0; }
+    .resource-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+    .resource-name { color:#e4d8cd; font-size:14px; font-weight:bold; letter-spacing:.12em; }
+    .resource-values { display:flex; gap:4px; align-items:center; color:var(--muted); font:10px Arial,sans-serif; }
+    .resource-values input { width:34px; padding:3px 1px; color:#f1e9e1; border:0; border-bottom:1px solid var(--red); background:transparent; text-align:center; font:bold 16px Georgia,serif; outline:none; }
+    .pips { display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:3px; }
+    .pip { height:12px; min-width:0; padding:0; border:1px solid #62564e; background:var(--emptySlot); }
+    .pip.filled { background:var(--whiteSlot); border-color:var(--whiteSlot); box-shadow:0 0 7px rgba(238,232,223,.17); }
+    .pip:hover { border-color:#ef7955; }
+    .resource-hint { font:9px Arial,sans-serif; color:var(--dim); margin-top:7px; }
+    .focus-copy { color:#c9bdb3; font-size:13px; line-height:1.55; margin:0 0 10px; }
+    .inline-editor { display:inline-block; width:40px; color:#e16b49; text-align:center; border:0; border-bottom:1px solid var(--red); background:transparent; outline:none; font:bold 15px Georgia,serif; }
+    .effect-line { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin:7px 0; color:#c9bdb3; font-size:12px; }
+    .small-number { width:48px; padding:3px 2px; color:#e4a18b; text-align:center; font-size:13px; }
+    .text-field { width:100%; display:block; resize:vertical; min-height:48px; color:#cfc4bb; font-size:12px; line-height:1.5; border:1px solid rgba(195,68,37,.18); padding:8px; background:rgba(0,0,0,.16); }
+    .class-ability-copy { color:#c9bdb3; font-size:12px; line-height:1.6; margin:0 0 10px; }
+    .class-ability-copy strong { color:#e7a087; }
+    .class-ability-copy ul { margin:6px 0 0; padding-left:18px; }
+    .analysis-slots { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin:6px 0 10px; }
+    .analysis-slot { height:28px; border:1px solid var(--red); background:#181514; color:var(--red); letter-spacing:.12em; font:bold 11px Arial,sans-serif; }
+    .analysis-slot.filled { color:#fff2e9; background:linear-gradient(180deg,#b94a2b,#762719); box-shadow:0 0 10px rgba(195,68,37,.18); }
+    .analysis-gain { margin:0 0 10px; border:1px solid var(--line); color:#e3a18a; background:#181514; padding:7px 10px; font:10px Arial,sans-serif; letter-spacing:.08em; text-transform:uppercase; }
+    .analysis-gain:disabled { opacity:.4; cursor:not-allowed; }
+    .impulse-slots { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:4px 0 12px; }
+    .impulse-slot { height:27px; border:1px solid var(--red); background:#181514; color:var(--red); letter-spacing:.16em; font:bold 11px Arial,sans-serif; }
+    .impulse-slot.filled { color:#fff2e9; background:linear-gradient(180deg,#b94a2b,#762719); box-shadow:0 0 10px rgba(195,68,37,.18); }
+    .muted-note { color:#8f8278; font-size:11px; line-height:1.45; margin:0 0 9px; }
+    .impulse-option { display:grid; grid-template-columns:52px 1fr; gap:8px; align-items:start; margin-top:8px; }
+    .impulse-option .small-number { width:46px; }
+    .footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:13px 7px 2px; color:#71665e; font:9px Arial,sans-serif; letter-spacing:.1em; }
+    .toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:#171a17; border:1px solid #64734e; color:#d5e3c6; padding:9px 14px; font:12px Arial,sans-serif; opacity:0; pointer-events:none; transition:opacity .2s; z-index:10; }
+    .toast.show { opacity:1; }
+    .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.78); z-index:20; align-items:center; justify-content:center; padding:20px; }
+    .modal-backdrop.open { display:flex; }
+    .modal { width:min(440px,100%); background:#111313; border:1px solid var(--red); padding:20px; box-shadow:0 20px 80px #000; }
+    .modal h2 { margin:0 0 10px; color:#e6d8cd; font-size:20px; }
+    .modal p { color:#aa9e94; font:13px/1.5 Arial,sans-serif; }
+    .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; flex-wrap:wrap; }
+    .share-link-field { width:100%; min-height:86px; resize:vertical; word-break:break-all; font:11px/1.5 Arial,sans-serif; }
+    .share-help { margin:0 0 12px; }
+    .share-site-config { display:grid; gap:8px; margin-top:12px; }
+    .share-site-config label { color:var(--muted); font:10px Arial,sans-serif; letter-spacing:.1em; text-transform:uppercase; }
+    .share-site-config input { min-height:40px; width:100%; padding:8px; color:var(--ink); background:#080909; border:1px solid var(--lineSoft); outline:none; font:13px Arial,sans-serif; }
+    .share-site-config input:focus { border-color:var(--red); }
+    .share-tip { font:11px/1.5 Arial,sans-serif !important; color:#b6a89d !important; margin:0 !important; }
+    .share-result { margin-top:12px; }
+    .modal { max-height:calc(100dvh - 40px); overflow-y:auto; }
+    .modal-backdrop { overscroll-behavior:contain; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    @media (max-width:900px) {
+      .main-grid { grid-template-columns:1fr; }
+      .identity { grid-template-columns:1fr; }
+      .identity-meta { grid-template-columns:1fr 1fr 90px; }
+      .toolbar { align-items:flex-start; flex-direction:column; }
+      .toolbar-actions { justify-content:flex-start; }
+    }
+    @media (max-width:560px) {
+      .shell { width:calc(100% - 16px); margin:12px auto 22px; }
+      .frame { padding:8px; }
+      .panel { padding:12px 10px; }
+      .identity { padding-left:4px; padding-right:4px; }
+      .identity-meta { grid-template-columns:1fr 1fr; }
+      .identity-meta > :last-child { grid-column:span 2; width:90px; }
+      .attributes { gap:5px; }
+      .attribute-card { padding:8px 5px; }
+      .attribute-card label { font-size:10px; }
+      .skill-header, .skill-row { grid-template-columns:minmax(76px,1.05fr) minmax(108px,1.2fr) minmax(64px,.85fr) 18px; gap:3px; }
+      .skill-header { font-size:8px; letter-spacing:.03em; }
+      .skill-input, .skill-select { font-size:9px; }
+      .dice-pair { grid-template-columns:18px minmax(38px,1fr) 8px 18px; gap:2px; }
+      .die-token { width:18px; height:18px; font-size:8px; }
+      .die-select { font-size:9px; padding:4px 1px; }
+      .resources { gap:7px; }
+      .resource { padding:8px 6px; }
+      .resource-name { font-size:12px; }
+      .pips { gap:2px; }
+      .pip { height:9px; }
+      .toolbar-actions { gap:5px; }
+      .action, .toolbar select { font-size:10px; padding:6px 8px; }
+    }
+    @media print {
+      @page { size:A4; margin:8mm; }
+      body { background:#080909 !important; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+      .shell { width:100%; margin:0; }
+      .frame { box-shadow:none; padding:8px; }
+      .toolbar, .add-skill, .remove-skill, .stepper, .footer, .toast, .modal-backdrop { display:none !important; }
+      .main-grid { grid-template-columns:1.08fr .92fr; gap:9px; }
+      .panel { break-inside:avoid; padding:9px; }
+      .identity { padding-bottom:10px; margin-bottom:9px; }
+      .skill-row { padding:1px 2px; }
+      .skill-input, .skill-select { -webkit-appearance:none; appearance:none; }
+    }
+
+    .cloud-gate { width:min(760px,calc(100% - 28px)); margin:22px auto 12px; border:1px solid var(--line); background:#101212; padding:18px; box-shadow:0 12px 50px #0008; }
+    .cloud-gate h2,.cloud-gate h3 { color:#e9d9ce; margin:0 0 10px; }
+    .cloud-gate p { color:#b5a89d; font:12px/1.5 Arial,sans-serif; }
+    .cloud-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+    .cloud-box { border:1px solid var(--lineSoft); padding:12px; background:#0a0c0c; min-width:0; }
+    .cloud-box label { display:block; color:var(--muted); font:10px Arial,sans-serif; margin:8px 0 4px; text-transform:uppercase; letter-spacing:.08em; }
+    .cloud-box input { width:100%; padding:9px; color:var(--ink); background:#151717; border:1px solid var(--lineSoft); }
+    .cloud-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .cloud-status { color:#b5c89b !important; min-height:18px; }
+    .cloud-list { display:grid; gap:9px; margin-top:12px; }
+    .cloud-player { border:1px solid var(--lineSoft); padding:12px; background:#0b0d0d; }
+    .cloud-player-head { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+    .cloud-player strong { color:#eadbd0; }
+    .cloud-detail { margin-top:10px; border-top:1px solid var(--lineSoft); padding-top:10px; color:#cbbdb2; font:12px/1.55 Arial,sans-serif; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .cloud-hidden { display:none !important; }
+    .cloud-topbar { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:0 auto 10px; width:min(1440px,calc(100% - 34px)); }
+    @media(max-width:560px){.cloud-gate{padding:12px}.cloud-topbar{width:calc(100% - 16px)}}
+
+  </style>
 </head>
 <body>
-<main><h1>ARQUIVO DE AGENTES</h1><p id="status">Carregando sua ficha...</p></main>
-<script id="compressed-app" type="application/octet-stream">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</script>
-<script>
-(async function(){
-  const status=document.getElementById('status');
-  try{
-    if(!('DecompressionStream' in window)) throw new Error('Seu navegador está desatualizado. Atualize o Chrome, Edge ou Safari e tente novamente.');
-    const encoded=document.getElementById('compressed-app').textContent.trim();
-    const binary=atob(encoded);
-    const bytes=Uint8Array.from(binary,ch=>ch.charCodeAt(0));
-    const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-    const html=await new Response(stream).text();
-    document.open(); document.write(html); document.close();
-  }catch(error){
-    status.textContent='Não foi possível abrir a ficha. '+(error&&error.message?error.message:'Tente atualizar o navegador.');
-    console.error(error);
-  }
-})();
-</script>
-</body></html>
+
+  <section class="cloud-gate" id="cloudGate">
+    <h2>Conexão da campanha</h2>
+    <p>Entre com sua conta para sincronizar fichas pela internet. Cada jogador edita apenas a própria ficha; o mestre pode visualizar todas as fichas da campanha.</p>
+    <div id="cloudAuthArea" class="cloud-grid">
+      <div class="cloud-box">
+        <h3>Entrar ou criar conta</h3>
+        <label for="cloudEmail">E-mail</label><input id="cloudEmail" type="email" autocomplete="email" placeholder="seu@email.com">
+        <label for="cloudPassword">Senha</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Mínimo de 6 caracteres">
+        <div class="cloud-actions"><button class="action primary" id="cloudLogin">ENTRAR</button><button class="action" id="cloudSignup">CRIAR CONTA</button></div>
+      </div>
+      <div class="cloud-box"><h3>Já tem uma conta?</h3><p>Faça login. Depois você poderá criar uma campanha como mestre ou entrar usando o código enviado pelo mestre.</p><p>Se o Supabase pedir confirmação por e-mail, confirme antes de entrar.</p></div>
+    </div>
+    <div id="cloudCampaignArea" class="cloud-hidden">
+      <p id="cloudWelcome"></p>
+      <div class="cloud-grid">
+        <div class="cloud-box"><h3>Criar campanha (mestre)</h3><label for="cloudCampaignName">Nome da campanha</label><input id="cloudCampaignName" maxlength="60" value="Minha campanha"><div class="cloud-actions"><button class="action primary" id="cloudCreateCampaign">CRIAR CAMPANHA</button></div></div>
+        <div class="cloud-box"><h3>Entrar em campanha (jogador)</h3><label for="cloudInviteCode">Código do mestre</label><input id="cloudInviteCode" maxlength="20" placeholder="Ex.: ORDEM-7K2P"><div class="cloud-actions"><button class="action primary" id="cloudJoinCampaign">ENTRAR NA CAMPANHA</button></div></div>
+      </div>
+      <div id="cloudCampaignInfo"></div>
+      <div class="cloud-actions"><button class="action" id="cloudLogout">SAIR DA CONTA</button><button class="action" id="cloudContinueOffline">CONTINUAR SEM NUVEM</button></div>
+    </div>
+    <div id="cloudDashboard" class="cloud-hidden">
+      <div class="cloud-player-head"><h3 id="cloudDashboardTitle">Painel do Mestre</h3><span id="cloudRealtimeStatus" class="cloud-status">Conectando...</span></div>
+      <p id="cloudInviteDisplay"></p>
+      <div id="cloudPlayers" class="cloud-list"></div>
+      <div class="cloud-actions"><button class="action" id="cloudBackToCampaign">VOLTAR</button><button class="action" id="cloudRefresh">ATUALIZAR FICHAS</button></div>
+    </div>
+    <p id="cloudMessage" class="cloud-status" role="status" aria-live="polite"></p>
+  </section>
+  <div class="cloud-topbar cloud-hidden" id="cloudTopbar"><span id="cloudCurrentLabel" class="cloud-status">Campanha conectada</span><div class="cloud-actions"><button class="action" id="cloudOpenDashboard">PAINEL DO MESTRE</button><button class="action" id="cloudOpenCampaign">CAMPANHA</button><button class="action" id="cloudSignOutTop">SAIR</button></div></div>
+
+  <div class="shell" id="appShell">
+    <main class="frame">
+      <header class="toolbar">
+        <div class="brand">
+          <strong>ARQUIVO DE AGENTES</strong>
+          <span>ORDEM PARANORMAL RPG · REGISTRO INDIVIDUAL</span>
+        </div>
+        <div class="toolbar-actions">
+          <span class="save-state" id="saveState" aria-live="polite">● SALVO NESTE NAVEGADOR</span>
+          <label class="sr-only" for="characterSelect">Selecionar personagem</label>
+          <select id="characterSelect" title="Selecionar personagem"></select>
+          <button class="action" id="newCharacter">+ NOVO</button>
+          <button class="action" id="duplicateCharacter">DUPLICAR</button>
+          <button class="action danger" id="deleteCharacter">EXCLUIR</button>
+          <button class="action" id="exportCharacter" title="Baixar uma cópia de segurança HTML para abrir no navegador">BAIXAR BACKUP</button>
+          <button class="action" id="importCharacter">IMPORTAR</button>
+          <button class="action primary" id="shareCharacter">COMPARTILHAR</button>
+          <button class="action" id="printCharacter">IMPRIMIR</button>
+          <input id="fileInput" type="file" accept=".html,.htm,.json,text/html,application/json" hidden>
+        </div>
+      </header>
+
+      <section class="identity" aria-label="Identificação do agente">
+        <div>
+          <div class="eyebrow">Identificação do agente</div>
+          <label class="sr-only" for="characterName">Nome do personagem</label>
+          <input class="name-input" id="characterName" data-path="name" value="ALAN" maxlength="40" spellcheck="false">
+        </div>
+        <div class="identity-meta">
+          <div>
+            <label class="field-label" for="characterRole">Classe</label>
+            <select class="line-select" id="characterRole" data-path="role">
+              <option value="">SELECIONE</option>
+              <option value="EXECUTOR">EXECUTOR</option>
+              <option value="ANALISTA">ANALISTA</option>
+              <option value="VIGILANTE">VIGILANTE</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="characterProfession">Profissão / ocupação</label>
+            <input class="line-input" id="characterProfession" data-path="profession" value="CIENTISTA" maxlength="40" placeholder="Ex.: Cientista">
+          </div>
+          <div>
+            <label class="field-label" for="characterLevel">Nível</label>
+            <input class="level-input" id="characterLevel" data-path="level" type="number" min="0" max="99" value="2">
+          </div>
+        </div>
+      </section>
+
+      <div class="main-grid">
+        <section class="column">
+          <section class="panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Atributos</h2>
+              <span class="panel-kicker">CAPACIDADES DO AGENTE</span>
+            </div>
+            <div class="attributes">
+              <div class="attribute-card">
+                <label for="attrPhysical">Físico</label>
+                <div class="attribute-control">
+                  <button class="stepper" data-step="attributes.physical" data-delta="-1" aria-label="Diminuir Físico">−</button>
+                  <input id="attrPhysical" data-path="attributes.physical" type="number" min="4" max="20" step="1" value="6" aria-label="Valor de Físico (determina o dado)">
+                  <button class="stepper" data-step="attributes.physical" data-delta="1" aria-label="Aumentar Físico">+</button>
+                </div>
+              </div>
+              <div class="attribute-card">
+                <label for="attrMind">Mente</label>
+                <div class="attribute-control">
+                  <button class="stepper" data-step="attributes.mind" data-delta="-1" aria-label="Diminuir Mente">−</button>
+                  <input id="attrMind" data-path="attributes.mind" type="number" min="4" max="20" step="1" value="8" aria-label="Valor de Mente (determina o dado)">
+                  <button class="stepper" data-step="attributes.mind" data-delta="1" aria-label="Aumentar Mente">+</button>
+                </div>
+              </div>
+              <div class="attribute-card">
+                <label for="attrEmotion">Emoção</label>
+                <div class="attribute-control">
+                  <button class="stepper" data-step="attributes.emotion" data-delta="-1" aria-label="Diminuir Emoção">−</button>
+                  <input id="attrEmotion" data-path="attributes.emotion" type="number" min="4" max="20" step="1" value="8" aria-label="Valor de Emoção (determina o dado)">
+                  <button class="stepper" data-step="attributes.emotion" data-delta="1" aria-label="Aumentar Emoção">+</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel skills-panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Perícias</h2>
+              <span class="panel-kicker">COMBINAÇÃO DE DADOS</span>
+            </div>
+            <div class="skill-table">
+              <div class="skill-header"><span>Perícia</span><span>Dados</span><span>Atributo</span><span></span></div>
+              <div id="skillsList"></div>
+            </div>
+            <p class="muted-note" style="margin-top:9px">Cada teste combina o dado da perícia com o dado do atributo. O segundo dado acompanha automaticamente o valor do atributo.</p>
+            <button class="add-skill" id="addSkill">+ Adicionar perícia</button>
+          </section>
+        </section>
+
+        <section class="column">
+          <section class="panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Recursos</h2>
+              <span class="panel-kicker">PONTOS ATUAIS / MÁXIMOS</span>
+            </div>
+            <div class="resources">
+              <div class="resource">
+                <div class="resource-top">
+                  <span class="resource-name">PV</span>
+                  <span class="resource-values"><input id="pvCurrent" data-path="resources.pv.current" type="number" min="0" max="99" value="10" aria-label="PV atual"> / <input id="pvMax" data-path="resources.pv.max" type="number" min="1" max="99" value="10" aria-label="PV máximo"></span>
+                </div>
+                <div class="pips" id="pvPips" aria-label="Marcadores de pontos de vida"></div>
+                <div class="resource-hint">Clique nos quadrados para ajustar o valor atual.</div>
+              </div>
+              <div class="resource">
+                <div class="resource-top">
+                  <span class="resource-name">PD</span>
+                  <span class="resource-values"><input id="pdCurrent" data-path="resources.pd.current" type="number" min="0" max="99" value="16" aria-label="PD atual"> / <input id="pdMax" data-path="resources.pd.max" type="number" min="1" max="99" value="16" aria-label="PD máximo"></span>
+                </div>
+                <div class="pips" id="pdPips" aria-label="Marcadores de pontos de determinação"></div>
+                <div class="resource-hint">Clique nos quadrados para ajustar o valor atual.</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" id="professionAbilityPanel">
+            <div class="panel-head">
+              <h2 class="panel-title">Habilidade da profissão</h2>
+              <span class="panel-kicker">OCUPAÇÃO / ESPECIALIZAÇÃO</span>
+            </div>
+            <div id="professionAbilityEditor"></div>
+          </section>
+
+          <section class="panel hidden-panel" id="executorAbilityPanel">
+            <div class="panel-head">
+              <h2 class="panel-title">Ímpeto</h2>
+              <span class="panel-kicker">HABILIDADE DE CLASSE · EXECUTOR</span>
+            </div>
+            <div class="impulse-slots" id="impulseSlots" aria-label="Espaços de ímpeto">
+              <button type="button" class="impulse-slot" data-slot="0" aria-label="Alternar espaço de ímpeto 1">01</button>
+              <button type="button" class="impulse-slot" data-slot="1" aria-label="Alternar espaço de ímpeto 2">02</button>
+              <button type="button" class="impulse-slot" data-slot="2" aria-label="Alternar espaço de ímpeto 3">03</button>
+            </div>
+            <p class="class-ability-copy">Você possui uma barra de Ímpeto com três espaços. Sempre que falha em um teste, preenche um espaço na barra.</p>
+            <p class="class-ability-copy">Você pode apagar espaços preenchidos para:</p>
+            <ul class="class-ability-copy">
+              <li>Gastar <strong>1 espaço</strong> para receber <strong>+1</strong> em um teste.</li>
+              <li>Gastar <strong>3 espaços</strong> para aumentar um atributo em um passo até o fim da cena.</li>
+            </ul>
+          </section>
+
+          <section class="panel hidden-panel" id="analistaAbilityPanel">
+            <div class="panel-head">
+              <h2 class="panel-title">Análise</h2>
+              <span class="panel-kicker">HABILIDADE DE CLASSE · ANALISTA</span>
+            </div>
+            <div class="analysis-slots" id="analysisSlots" aria-label="Marcadores de análise">
+              <button type="button" class="analysis-slot" data-analysis-slot="0" aria-label="Alternar marcador de análise 1">01</button>
+              <button type="button" class="analysis-slot" data-analysis-slot="1" aria-label="Alternar marcador de análise 2">02</button>
+              <button type="button" class="analysis-slot" data-analysis-slot="2" aria-label="Alternar marcador de análise 3">03</button>
+              <button type="button" class="analysis-slot" data-analysis-slot="3" aria-label="Alternar marcador de análise 4">04</button>
+            </div>
+            <button type="button" class="analysis-gain" id="gainAnalysis">+2 MARCADORES · GASTAR UMA AÇÃO</button>
+            <p class="class-ability-copy">Você pode gastar uma ação para receber <strong>2 marcadores de análise</strong>.</p>
+            <ul class="class-ability-copy">
+              <li>Quando faz um teste, pode gastar quantos marcadores quiser após rolar os dados. Para cada marcador gasto, pode mudar o resultado de um dado em <strong>+1 ou −1</strong> (até o máximo do dado).</li>
+              <li>Você pode acumular no máximo <strong>4 marcadores de análise</strong> e, no fim da cena, perde quaisquer marcadores não usados.</li>
+            </ul>
+            <p class="muted-note">Clique nos marcadores preenchidos para gastá-los. O botão acima adiciona dois, respeitando o limite de quatro.</p>
+          </section>
+
+          <section class="panel hidden-panel" id="vigilanteAbilityPanel">
+            <div class="panel-head">
+              <h2 class="panel-title">Prontidão</h2>
+              <span class="panel-kicker">HABILIDADE DE CLASSE · VIGILANTE</span>
+            </div>
+            <p class="class-ability-copy">Uma vez por rodada, quando você ou outro ser em alcance curto faz um teste, você pode gastar <strong>2 PD</strong> para rolar novamente, ou para fazer o outro ser rolar novamente, um dos dados do teste cujo resultado não tenha sido 1.</p>
+            <p class="class-ability-copy">Além disso, em combates, você pode fazer sua ação na fase dela ou em fases posteriores, e após qualquer ação daquela fase já ter sido rolada.</p>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Anotações</h2>
+              <span class="panel-kicker">INFORMAÇÕES LIVRES</span>
+            </div>
+            <textarea class="text-field" data-path="notes" rows="4" placeholder="Rituais, habilidades, inventário, condições, pistas..." aria-label="Anotações do personagem"></textarea>
+          </section>
+        </section>
+      </div>
+
+      <footer class="footer">
+        <span>REGISTRO DE USO PESSOAL · CLASSE E PROFISSÃO</span>
+        <span>SALVAMENTO AUTOMÁTICO · SINCRONIZAÇÃO ONLINE QUANDO CONECTADO À CAMPANHA</span>
+      </footer>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="modal-backdrop" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <h2 id="modalTitle">Excluir personagem?</h2>
+      <p id="modalText">Esta ação não poderá ser desfeita.</p>
+      <div class="modal-actions">
+        <button class="action" id="cancelDelete">CANCELAR</button>
+        <button class="action danger" id="confirmDelete">EXCLUIR</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop" id="shareModal" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
+    <div class="modal">
+      <h2 id="shareModalTitle">Compartilhar personagem</h2>
+      <p class="share-help" id="shareModalHelp">Compartilhe um link do personagem. Não envie o arquivo HTML como mensagem de texto: ele é o código do site, não o link.</p>
+      <div class="share-site-config" id="shareSiteConfig">
+        <label for="shareSiteUrl">Endereço público do site (GitHub Pages)</label>
+        <input id="shareSiteUrl" type="url" inputmode="url" autocomplete="url" placeholder="https://seuusuario.github.io/seurepositorio/">
+        <p class="share-tip">Este campo só é necessário quando você abriu a ficha como arquivo no computador/celular. Primeiro, publique o site gratuitamente. Depois, cole aqui o endereço que abre a ficha no navegador.</p>
+        <button class="action primary" id="generateShareLink">GERAR LINK DO PERSONAGEM</button>
+      </div>
+      <div class="share-result hidden-panel" id="shareResult">
+        <textarea class="text-field share-link-field" id="shareLinkField" readonly aria-label="Link para compartilhar"></textarea>
+        <p class="share-tip">Envie somente este link pelo WhatsApp, Discord ou outro aplicativo. Ao abrir, o site importa uma cópia do personagem para quem recebeu.</p>
+        <div class="modal-actions">
+          <button class="action" id="shareViaDevice">COMPARTILHAR...</button>
+          <button class="action primary" id="copyShareLink">COPIAR LINK</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="action" id="closeShareModal">FECHAR</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    'use strict';
+    const STORAGE_KEY = 'ordem-paranormal-fichas-v1';
+    const DIE_SIDES = [4,6,8,10,12,20];
+    const defaultSkills = [
+      ['Acrobacia','d4','physical'], ['Aptidão (Humanas)','d6','mind'], ['Atletismo','d4','physical'],
+      ['Crime','d6','physical'], ['Disciplina','d6','emotion'], ['Enganação','d6','emotion'],
+      ['Furtividade','d4','physical'], ['Intimidação','d4','emotion'], ['Intuição','d4','emotion'],
+      ['Luta','d4','physical'], ['Máquinas','d4','mind'], ['Medicina','d4','mind'],
+      ['Ocultismo','d4','mind'], ['Percepção','d8','mind'], ['Persuasão','d4','emotion'],
+      ['Pesquisa','d6','mind'], ['Pontaria','d4','physical'], ['Sobrevivência','d4','mind'],
+      ['Tecnologia','d4','mind'], ['Vigor','d6','physical']
+    ];
+    const freshCharacter = (name='NOVO AGENTE') => ({
+      id: makeId(), name, role:'', profession:'', level:1,
+      attributes:{physical:4,mind:4,emotion:4},
+      resources:{pv:{current:10,max:10},pd:{current:16,max:16}},
+      professionAbility:{name:'',cost:0,bonus:0,description:''},
+      classAbilities:{analista:{name:'',description:''},vigilante:{name:'',description:''}},
+      analysis:{markers:0},
+      impulse:{slots:[false,false,false],testCost:1,testBonus:1,attributeCost:3,description:'Os espaços preenchidos podem ser gastos a qualquer momento, conforme as opções acima.'},
+      skills:defaultSkills.map(s=>({name:s[0],die:s[1],attribute:s[2]})), notes:''
+    });
+    function makeId(){ return 'agent-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8); }
+    function deepClone(o){ return JSON.parse(JSON.stringify(o)); }
+    function clampNumber(v,min=0,max=99){ const n=Number(v); return Number.isFinite(n) ? Math.min(max,Math.max(min,n)) : min; }
+    function normalizeDie(value){
+      const match=String(value ?? '').match(/(?:1)?d?(4|6|8|10|12|20)/i);
+      if(match) return 'd'+match[1];
+      const numeric=Number(value);
+      return DIE_SIDES.includes(numeric)?'d'+numeric:'d4';
+    }
+    function dieForAttribute(value){
+      const n=clampNumber(value,4,20);
+      const nearest=DIE_SIDES.reduce((best,current)=>Math.abs(current-n)<Math.abs(best-n)?current:best,DIE_SIDES[0]);
+      return 'd'+nearest;
+    }
+    function dieClass(die){ return 'die-'+normalizeDie(die).slice(1); }
+    function escapeHTML(value){ return String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function normalizeText(value){ return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase(); }
+    function normalizeCharacter(input){
+      const base=freshCharacter();
+      if(!input || typeof input!=='object') return base;
+      const merged={...base,...input};
+      merged.id=typeof input.id==='string' ? input.id : makeId();
+      merged.name=String(input.name ?? base.name).slice(0,40);
+      merged.role=String(input.role ?? '').trim().toUpperCase().slice(0,30);
+      merged.profession=String(input.profession ?? input.specialty ?? '').slice(0,40);
+      merged.level=clampNumber(input.level,0,99);
+      merged.attributes={physical:clampNumber(input.attributes?.physical,4,20),mind:clampNumber(input.attributes?.mind,4,20),emotion:clampNumber(input.attributes?.emotion,4,20)};
+      merged.resources={pv:{current:clampNumber(input.resources?.pv?.current),max:Math.max(1,clampNumber(input.resources?.pv?.max,1,99))},pd:{current:clampNumber(input.resources?.pd?.current),max:Math.max(1,clampNumber(input.resources?.pd?.max,1,99))}};
+      for(const key of ['pv','pd']) merged.resources[key].current=Math.min(merged.resources[key].current,merged.resources[key].max);
+      const oldFocus=input.focus ?? {};
+      const isScientist=normalizeText(merged.profession)==='cientista';
+      const incomingProfessionAbility=input.professionAbility && typeof input.professionAbility==='object' ? input.professionAbility : null;
+      const oldProfessionDescription=String(incomingProfessionAbility?.description ?? oldFocus.description ?? '');
+      const genericOldScientistDescription='O agente concentra seus pensamentos para superar desafios que exigem raciocínio e controle.';
+      merged.professionAbility={
+        name:String(incomingProfessionAbility?.name ?? (isScientist ? 'Foco Mental' : '')).slice(0,60),
+        cost:clampNumber(incomingProfessionAbility?.cost ?? oldFocus.cost ?? (isScientist ? 2 : 0)),
+        bonus:clampNumber(incomingProfessionAbility?.bonus ?? oldFocus.bonus ?? (isScientist ? 1 : 0)),
+        description:(isScientist && oldProfessionDescription===genericOldScientistDescription) ? '' : oldProfessionDescription
+      };
+      merged.analysis={markers:clampNumber(input.analysis?.markers,0,4)};
+      const savedClassAbilities=input.classAbilities && typeof input.classAbilities==='object' ? input.classAbilities : {};
+      merged.classAbilities={
+        analista:{name:String(savedClassAbilities.analista?.name ?? '').slice(0,60),description:String(savedClassAbilities.analista?.description ?? '')},
+        vigilante:{name:String(savedClassAbilities.vigilante?.name ?? '').slice(0,60),description:String(savedClassAbilities.vigilante?.description ?? '')}
+      };
+      merged.impulse={slots:Array.isArray(input.impulse?.slots)?[0,1,2].map(i=>!!input.impulse.slots[i]):[false,false,false],testCost:clampNumber(input.impulse?.testCost,0,3),testBonus:clampNumber(input.impulse?.testBonus),attributeCost:clampNumber(input.impulse?.attributeCost,0,3),description:String(input.impulse?.description ?? '')};
+      merged.skills=Array.isArray(input.skills)?input.skills.slice(0,100).map(s=>({name:String(s?.name ?? 'Perícia').slice(0,40),die:normalizeDie(s?.die ?? s?.training),attribute:['physical','mind','emotion'].includes(s?.attribute)?s.attribute:'physical'})):base.skills;
+      merged.notes=String(input.notes ?? '');
+      return merged;
+    }
+    let app={characters:[],activeId:null};
+    // Uma ficha exportada em HTML carrega seus próprios dados. Eles têm prioridade
+    // sobre o salvamento local para que o arquivo abra com o personagem enviado.
+    let embeddedCharacter=null;
+    let activeStorageKey=STORAGE_KEY;
+    try {
+      const payloadNode=document.getElementById('opCharacterPayload');
+      if(payloadNode && payloadNode.textContent.trim()){
+        embeddedCharacter=JSON.parse(payloadNode.textContent);
+        activeStorageKey=STORAGE_KEY+'-portable-'+String(payloadNode.dataset.exportId || embeddedCharacter.id || 'copy');
+      }
+    } catch(err) { console.warn('Dados incorporados no arquivo HTML inválidos.',err); }
+    if(embeddedCharacter && typeof embeddedCharacter==='object'){
+      // Cada arquivo HTML portátil mantém seu próprio salvamento neste aparelho,
+      // sem sobrescrever a coleção principal de fichas do site.
+      try {
+        const portableSaved=JSON.parse(localStorage.getItem(activeStorageKey)||'null');
+        if(portableSaved && Array.isArray(portableSaved.characters) && portableSaved.characters.length){
+          app.characters=portableSaved.characters.map(normalizeCharacter); app.activeId=portableSaved.activeId;
+        }
+      } catch(err) { console.warn('Não foi possível ler o salvamento desta cópia portátil.',err); }
+      if(!app.characters.length){
+        const imported=normalizeCharacter(embeddedCharacter);
+        imported.id=makeId();
+        app.characters=[imported]; app.activeId=imported.id;
+      }
+    } else {
+      try {
+        const saved=JSON.parse(localStorage.getItem(activeStorageKey)||'null');
+        if(saved && Array.isArray(saved.characters) && saved.characters.length){
+          app.characters=saved.characters.map(normalizeCharacter); app.activeId=saved.activeId;
+        }
+      } catch(err) { console.warn('Não foi possível ler o salvamento local.',err); }
+    }
+    if(!app.characters.length){ const first=freshCharacter('ALAN'); first.role='EXECUTOR'; first.profession='CIENTISTA'; first.professionAbility={name:'Foco Mental',cost:2,bonus:1,description:'O agente concentra seus pensamentos para superar desafios que exigem raciocínio e controle.'}; first.level=2; first.attributes={physical:6,mind:8,emotion:8}; app.characters=[first]; app.activeId=first.id; }
+    if(!app.characters.some(c=>c.id===app.activeId)) app.activeId=app.characters[0].id;
+    let toastTimer;
+    const $=id=>document.getElementById(id);
+    const active=()=>app.characters.find(c=>c.id===app.activeId) || app.characters[0];
+    function showToast(message){ const el=$('toast'); el.textContent=message; el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),2300); }
+    let cloudClient=null, cloudUser=null, cloudCampaign=null, cloudRole=null, cloudChannel=null, cloudSaveTimer=null, cloudSaving=false;
+    function save(){
+      try { localStorage.setItem(activeStorageKey,JSON.stringify(app)); $('saveState').textContent='● SALVO NESTE NAVEGADOR'; $('saveState').style.color='var(--green)'; }
+      catch(err){ $('saveState').textContent='● EXPORTAR PARA NÃO PERDER'; $('saveState').style.color='#e6a080'; }
+      if(cloudClient && cloudUser && cloudCampaign && cloudRole==='player') scheduleCloudSave();
+    }
+    function cloudMessage(msg){ const el=$('cloudMessage'); if(el) el.textContent=msg||''; }
+    function cloudShow(which){
+      $('cloudAuthArea').classList.toggle('cloud-hidden',which!=='auth');
+      $('cloudCampaignArea').classList.toggle('cloud-hidden',which!=='campaign');
+      $('cloudDashboard').classList.toggle('cloud-hidden',which!=='dashboard');
+      $('cloudGate').classList.toggle('cloud-hidden',which==='hidden');
+      $('cloudTopbar').classList.toggle('cloud-hidden',which!=='hidden');
+      $('appShell').classList.toggle('cloud-hidden',which==='dashboard'||which==='auth');
+    }
+    function randomInvite(){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let out='ORDEM-'; for(let i=0;i<5;i++) out+=chars[Math.floor(Math.random()*chars.length)]; return out; }
+    async function cloudSignIn(signup){
+      const email=$('cloudEmail').value.trim(), password=$('cloudPassword').value;
+      if(!email || password.length<6){cloudMessage('Informe um e-mail válido e uma senha com pelo menos 6 caracteres.');return;}
+      cloudMessage(signup?'Criando conta...':'Entrando...');
+      const result=signup?await cloudClient.auth.signUp({email,password}):await cloudClient.auth.signInWithPassword({email,password});
+      if(result.error){cloudMessage(result.error.message);return;}
+      if(signup && !result.data.session){cloudMessage('Conta criada! Confirme o e-mail enviado pelo Supabase e depois faça login.');return;}
+      cloudUser=result.data.user; await cloudAfterLogin();
+    }
+    async function cloudAfterLogin(){
+      const {data:{user}}=await cloudClient.auth.getUser(); cloudUser=user;
+      if(!cloudUser){cloudShow('auth');return;}
+      $('cloudWelcome').textContent='Conectado como '+cloudUser.email+'. Escolha criar uma campanha ou entrar com um código.';
+      cloudShow('campaign'); cloudMessage('Conta conectada.');
+      const {data:owned}=await cloudClient.from('campaigns').select('*').eq('owner_id',cloudUser.id).order('created_at',{ascending:false});
+      if(owned?.length){ cloudCampaign=owned[0]; cloudRole='owner'; await cloudOpenMaster(); return; }
+      const {data:members}=await cloudClient.from('campaign_members').select('campaign_id,role,campaigns(*)').eq('user_id',cloudUser.id).limit(1);
+      if(members?.length){cloudCampaign=members[0].campaigns;cloudRole='player';await cloudOpenPlayer();return;}
+    }
+    async function cloudCreateCampaign(){
+      const name=$('cloudCampaignName').value.trim()||'Minha campanha'; const code=randomInvite(); cloudMessage('Criando campanha...');
+      const {data,error}=await cloudClient.from('campaigns').insert({name,invite_code:code,owner_id:cloudUser.id}).select().single();
+      if(error){cloudMessage(error.message);return;} cloudCampaign=data;cloudRole='owner';await cloudOpenMaster();
+    }
+    async function cloudJoinCampaign(){
+      const code=$('cloudInviteCode').value.trim(); if(!code){cloudMessage('Digite o código enviado pelo mestre.');return;}
+      cloudMessage('Entrando na campanha...');
+      const {data:campaignId,error}=await cloudClient.rpc('join_campaign_by_code',{p_code:code});
+      if(error){cloudMessage(error.message);return;}
+      const {data:campaign,error:campaignError}=await cloudClient.from('campaigns').select('*').eq('id',campaignId).single();
+      if(campaignError){cloudMessage(campaignError.message);return;} cloudCampaign=campaign;cloudRole='player';
+      await cloudOpenPlayer();
+    }
+    function normalizeApp(value){const chars=Array.isArray(value?.characters)?value.characters.map(normalizeCharacter):[];if(!chars.length)chars.push(freshCharacter());return {characters:chars,activeId:value?.activeId&&chars.some(c=>c.id===value.activeId)?value.activeId:chars[0].id};}
+    async function cloudOpenPlayer(){
+      if(cloudChannel){await cloudClient.removeChannel(cloudChannel);cloudChannel=null;}
+      const {data:existing,error:readError}=await cloudClient.from('character_sheets').select('*').eq('campaign_id',cloudCampaign.id).eq('user_id',cloudUser.id).maybeSingle();
+      if(readError){cloudMessage('Não foi possível carregar sua ficha: '+readError.message);cloudShow('campaign');return;}
+      if(existing?.sheet_data){app=normalizeApp(existing.sheet_data);updateIdentity();}
+      else {const {error:insertError}=await cloudClient.from('character_sheets').insert({campaign_id:cloudCampaign.id,user_id:cloudUser.id,character_name:active().name||'Sem nome',sheet_data:app});if(insertError){cloudMessage('Não foi possível criar sua ficha: '+insertError.message);cloudShow('campaign');return;}}
+      try{localStorage.setItem(STORAGE_KEY,JSON.stringify(app));}catch(err){}
+      $('cloudCurrentLabel').textContent='Jogador · '+cloudCampaign.name+' · sincronização online';
+      $('cloudOpenDashboard').classList.add('cloud-hidden'); $('cloudOpenCampaign').classList.remove('cloud-hidden');
+      cloudShow('hidden'); cloudMessage('Ficha vinculada à campanha. Suas alterações serão salvas na nuvem automaticamente.');
+      $('saveState').textContent='● SINCRONIZADO COM A CAMPANHA';
+    }
+    async function cloudOpenMaster(){
+      $('cloudDashboardTitle').textContent='Painel do Mestre · '+cloudCampaign.name;
+      $('cloudInviteDisplay').textContent='Código para os jogadores: '+cloudCampaign.invite_code+'  ·  Compartilhe somente com seu grupo.';
+      $('cloudOpenDashboard').classList.remove('cloud-hidden'); $('cloudOpenCampaign').classList.add('cloud-hidden');
+      cloudShow('dashboard'); await cloudRefreshSheets();
+      if(cloudChannel) await cloudClient.removeChannel(cloudChannel);
+      cloudChannel=cloudClient.channel('campaign-sheets-'+cloudCampaign.id).on('postgres_changes',{event:'*',schema:'public',table:'character_sheets',filter:'campaign_id=eq.'+cloudCampaign.id},()=>cloudRefreshSheets()).subscribe(status=>{ $('cloudRealtimeStatus').textContent=status==='SUBSCRIBED'?'● AO VIVO · ATUALIZAÇÃO AUTOMÁTICA':'Conectando: '+status; });
+    }
+    async function cloudRefreshSheets(){
+      if(!cloudCampaign)return; const host=$('cloudPlayers'); host.innerHTML='<p>Carregando fichas...</p>';
+      const {data,error}=await cloudClient.from('character_sheets').select('id,user_id,character_name,sheet_data,updated_at').eq('campaign_id',cloudCampaign.id).order('updated_at',{ascending:false});
+      if(error){host.textContent='Erro ao carregar fichas: '+error.message;return;}
+      host.innerHTML=''; if(!data?.length){host.innerHTML='<p>Nenhuma ficha ainda. Quando um jogador entrar pelo código da campanha, a ficha aparecerá aqui.</p>';return;}
+      data.forEach((row,index)=>{
+        const pack=normalizeApp(row.sheet_data); const c=pack.characters.find(x=>x.id===pack.activeId)||pack.characters[0];
+        const el=document.createElement('article');el.className='cloud-player';
+        const head=document.createElement('div');head.className='cloud-player-head';
+        const title=document.createElement('strong');title.textContent=c.name||row.character_name||'Agente';
+        const btn=document.createElement('button');btn.className='action';btn.textContent='VER FICHA';btn.addEventListener('click',()=>cloudShowSheet(row));
+        head.append(title,btn);el.append(head);
+        const meta=document.createElement('p');meta.textContent='Classe: '+(c.role||'—')+' · Profissão: '+(c.profession||'—')+' · Atualizada: '+new Date(row.updated_at).toLocaleString('pt-BR');el.append(meta);
+        host.append(el);
+      });
+    }
+    function cloudShowSheet(row){
+      const pack=normalizeApp(row.sheet_data);const c=pack.characters.find(x=>x.id===pack.activeId)||pack.characters[0];
+      const host=$('cloudPlayers');host.innerHTML='';
+      const card=document.createElement('article');card.className='cloud-player';
+      const head=document.createElement('div');head.className='cloud-player-head';const title=document.createElement('strong');title.textContent=c.name||'Agente';const back=document.createElement('button');back.className='action';back.textContent='VOLTAR À LISTA';back.onclick=cloudRefreshSheets;head.append(title,back);card.append(head);
+      const lines=[`Classe: ${c.role||'—'} | Profissão: ${c.profession||'—'} | Nível: ${c.level}`,`Atributos — Físico: ${c.attributes.physical} · Mente: ${c.attributes.mind} · Emoção: ${c.attributes.emotion}`,`PV: ${c.resources.pv.current}/${c.resources.pv.max} · PD: ${c.resources.pd.current}/${c.resources.pd.max}`,`Habilidade da profissão: ${c.professionAbility.name||'—'}
+${c.professionAbility.description||''}`,`Perícias:
+${c.skills.map(sk=>`${sk.name}: ${sk.die} + ${sk.attribute}`).join('\n')}`,`Anotações:
+${c.notes||'—'}`];
+      const detail=document.createElement('div');detail.className='cloud-detail';detail.textContent=lines.join('\n\n');card.append(detail);host.append(card);
+    }
+    async function scheduleCloudSave(){
+      clearTimeout(cloudSaveTimer);cloudSaveTimer=setTimeout(async()=>{
+        if(cloudSaving||!cloudCampaign||cloudRole!=='player'||!cloudUser)return;
+        cloudSaving=true;try{
+          const {error}=await cloudClient.from('character_sheets').upsert({campaign_id:cloudCampaign.id,user_id:cloudUser.id,character_name:active().name||'Sem nome',sheet_data:app},{onConflict:'campaign_id,user_id'});
+          if(error){$('saveState').textContent='● ERRO AO SINCRONIZAR';$('saveState').style.color='#e6a080';cloudMessage('Falha ao sincronizar: '+error.message);}
+          else {$('saveState').textContent='● SINCRONIZADO COM A CAMPANHA';$('saveState').style.color='var(--green)';}
+        }catch(err){cloudMessage('Falha de conexão com a nuvem.');}finally{cloudSaving=false;}
+      },450);
+    }
+    async function cloudSignOut(){if(cloudChannel)await cloudClient.removeChannel(cloudChannel);cloudChannel=null;cloudUser=null;cloudCampaign=null;cloudRole=null;await cloudClient.auth.signOut();cloudShow('auth');cloudMessage('Você saiu da conta.');}
+    function cloudInit(){
+      const url='https://wewxhztsjcnjzsproozd.supabase.co';
+      const key='sb_publishable_QXN11JTAx_h6lSE0MHNA4Q_20nnUPn8';
+      if(!window.supabase?.createClient){cloudShow('auth');cloudMessage('Não foi possível carregar o serviço de sincronização. Verifique sua conexão e atualize a página.');return;}
+      cloudClient=window.supabase.createClient(url,key);
+      $('cloudLogin').onclick=()=>cloudSignIn(false);$('cloudSignup').onclick=()=>cloudSignIn(true);
+      $('cloudCreateCampaign').onclick=cloudCreateCampaign;$('cloudJoinCampaign').onclick=cloudJoinCampaign;
+      $('cloudLogout').onclick=cloudSignOut;$('cloudSignOutTop').onclick=cloudSignOut;
+      $('cloudContinueOffline').onclick=()=>cloudShow('hidden');$('cloudOpenDashboard').onclick=cloudOpenMaster;$('cloudOpenCampaign').onclick=()=>{cloudShow('campaign');};
+      $('cloudBackToCampaign').onclick=()=>cloudShow('campaign');$('cloudRefresh').onclick=cloudRefreshSheets;
+      cloudClient.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_IN'&&session?.user){cloudUser=session.user;setTimeout(()=>cloudAfterLogin(),0);}});
+      cloudClient.auth.getSession().then(({data})=>{if(data.session){cloudUser=data.session.user;cloudAfterLogin();}else cloudShow('auth');});
+    }
+    function setPath(object,path,value){ const parts=path.split('.'); let target=object; for(let i=0;i<parts.length-1;i++) target=target[parts[i]]; target[parts.at(-1)]=value; }
+    function getAttributeValue(key){ return Number(active().attributes[key]||0); }
+    function updateIdentity(){
+      const c=active();
+      document.querySelectorAll('[data-path]').forEach(el=>{
+        const parts=el.dataset.path.split('.'); let value=c; for(const p of parts) value=value?.[p];
+        if(el.type==='checkbox') el.checked=!!value; else if(document.activeElement!==el) el.value=value ?? '';
+      });
+      $('characterName').value=c.name; $('characterRole').value=c.role; $('characterProfession').value=c.profession; $('characterLevel').value=c.level;
+      $('attrPhysical').value=c.attributes.physical; $('attrMind').value=c.attributes.mind; $('attrEmotion').value=c.attributes.emotion;
+      $('pvCurrent').value=c.resources.pv.current; $('pvMax').value=c.resources.pv.max; $('pdCurrent').value=c.resources.pd.current; $('pdMax').value=c.resources.pd.max;
+      renderSelect(); renderSkills(); renderPips('pv'); renderPips('pd'); renderImpulse(); renderAnalysis(); updateSkillDice(); renderClassAbility(); renderProfessionAbility();
+    }
+    function renderClassAbility(){
+      const role=String(active().role || '').trim().toUpperCase();
+      $('executorAbilityPanel').classList.toggle('hidden-panel',role!=='EXECUTOR');
+      $('analistaAbilityPanel').classList.toggle('hidden-panel',role!=='ANALISTA');
+      $('vigilanteAbilityPanel').classList.toggle('hidden-panel',role!=='VIGILANTE');
+    }
+    function renderProfessionAbility(){
+      const c=active();
+      const host=$('professionAbilityEditor');
+      const isScientist=normalizeText(c.profession)==='cientista';
+      const ability=c.professionAbility;
+      const nameLabel=isScientist?'Habilidade da ocupação':'Nome da habilidade da profissão';
+      const descLabel=isScientist?'Descrição adicional / observações':'Descrição / regra da habilidade';
+      host.innerHTML=`
+        <label class="field-label" for="professionAbilityName">${nameLabel}</label>
+        <input class="ability-name" id="professionAbilityName" data-path="professionAbility.name" maxlength="60" placeholder="${isScientist?'Foco Mental':'Digite o nome da habilidade'}" value="${escapeHTML(ability.name)}">
+        ${isScientist ? `<p class="focus-copy">Quando fizer um teste mental, você pode gastar <input class="inline-editor" data-path="professionAbility.cost" type="number" min="0" max="99" value="${ability.cost}" aria-label="Custo em PD"> PD para receber <strong>+<input class="inline-editor" data-path="professionAbility.bonus" type="number" min="0" max="99" value="${ability.bonus}" aria-label="Bônus no teste"></strong> no teste. Você pode editar os valores e a descrição abaixo.</p>` : `<p class="muted-note">Habilidade vinculada à profissão/ocupação. Você pode editar livremente o nome e o funcionamento; ela não altera a habilidade fixa da classe.</p>`}
+        <label class="field-label" for="professionAbilityDescription">${descLabel}</label>
+        <textarea class="text-field" id="professionAbilityDescription" data-path="professionAbility.description" rows="3" placeholder="Escreva aqui o funcionamento da habilidade...">${escapeHTML(ability.description)}</textarea>`;
+    }
+    function applyProfessionPresetIfNeeded(){
+      const c=active();
+      if(normalizeText(c.profession)==='cientista' && !String(c.professionAbility.name || '').trim()){
+        c.professionAbility.name='Foco Mental';
+        if(!c.professionAbility.cost) c.professionAbility.cost=2;
+        if(!c.professionAbility.bonus) c.professionAbility.bonus=1;
+        
+      }
+      renderProfessionAbility();
+      save();
+    }
+    function renderSelect(){
+      const select=$('characterSelect'); select.innerHTML='';
+      app.characters.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.textContent=c.name || 'SEM NOME'; o.selected=c.id===app.activeId; select.appendChild(o); });
+    }
+    function renderSkills(){
+      const list=$('skillsList'); list.innerHTML='';
+      active().skills.forEach((skill,index)=>{
+        const skillDie=normalizeDie(skill.die);
+        const attributeDie=dieForAttribute(active().attributes[skill.attribute]);
+        const row=document.createElement('div'); row.className='skill-row'; row.dataset.skillIndex=index;
+        const dieOptions=DIE_SIDES.map(sides=>`<option value="d${sides}" ${skillDie==='d'+sides?'selected':''}>1d${sides}</option>`).join('');
+        row.innerHTML=`<input class="skill-input name" data-skill="${index}.name" maxlength="40" aria-label="Nome da perícia" value="${escapeHTML(skill.name)}">
+          <div class="dice-pair" aria-label="Dado da perícia mais dado do atributo">
+            <span class="die-token ${dieClass(skillDie)}" data-skill-die="${index}" title="Dado da perícia: 1${skillDie}">${skillDie.slice(1)}</span>
+            <select class="die-select" data-skill="${index}.die" aria-label="Dado da perícia">${dieOptions}</select>
+            <span class="dice-plus">+</span>
+            <span class="die-token ${dieClass(attributeDie)}" data-attribute-die="${index}" title="Dado do atributo: 1${attributeDie}">${attributeDie.slice(1)}</span>
+          </div>
+          <select class="skill-select" data-skill="${index}.attribute" aria-label="Atributo da perícia">
+            <option value="physical" ${skill.attribute==='physical'?'selected':''}>Físico</option>
+            <option value="mind" ${skill.attribute==='mind'?'selected':''}>Mente</option>
+            <option value="emotion" ${skill.attribute==='emotion'?'selected':''}>Emoção</option>
+          </select>
+          <button class="remove-skill" data-remove-skill="${index}" aria-label="Remover ${escapeHTML(skill.name)}">×</button>`;
+        list.appendChild(row);
+      });
+    }
+    function updateSkillDice(){
+      const c=active();
+      c.skills.forEach((skill,index)=>{
+        const selected=normalizeDie(skill.die);
+        const selectedToken=document.querySelector(`[data-skill-die="${index}"]`);
+        if(selectedToken){selectedToken.className=`die-token ${dieClass(selected)}`;selectedToken.textContent=selected.slice(1);selectedToken.title=`Dado da perícia: 1${selected}`;}
+        const attributeDie=dieForAttribute(c.attributes[skill.attribute]);
+        const attributeToken=document.querySelector(`[data-attribute-die="${index}"]`);
+        if(attributeToken){attributeToken.className=`die-token ${dieClass(attributeDie)}`;attributeToken.textContent=attributeDie.slice(1);attributeToken.title=`Dado do atributo: 1${attributeDie}`;}
+      });
+    }
+    function renderPips(resource){
+      const data=active().resources[resource], host=$(resource+'Pips'); host.innerHTML='';
+      const count=Math.min(data.max,24);
+      host.style.gridTemplateColumns=`repeat(${Math.min(10,count)},minmax(0,1fr))`;
+      for(let i=0;i<count;i++){
+        const b=document.createElement('button'); b.type='button'; b.className='pip'+(i<data.current?' filled':''); b.setAttribute('aria-label',`Definir ${resource.toUpperCase()} atual em ${i+1}`); b.title=`${i+1} / ${data.max}`;
+        b.addEventListener('click',()=>{data.current=i+1; $(resource+'Current').value=data.current; renderPips(resource); save();}); host.appendChild(b);
+      }
+      if(data.max>24){ const more=document.createElement('span'); more.className='resource-hint'; more.textContent=`+ ${data.max-24} pontos não exibidos`; host.appendChild(more); }
+    }
+    function renderImpulse(){
+      active().impulse.slots.forEach((filled,i)=>{const b=document.querySelector(`[data-slot="${i}"]`); b.classList.toggle('filled',filled); b.setAttribute('aria-pressed',String(filled));});
+    }
+    function renderAnalysis(){
+      const markers=active().analysis.markers;
+      document.querySelectorAll('[data-analysis-slot]').forEach((button,index)=>{
+        const filled=index<markers;
+        button.classList.toggle('filled',filled);
+        button.setAttribute('aria-pressed',String(filled));
+      });
+      $('gainAnalysis').disabled=markers>=4;
+      $('gainAnalysis').textContent=markers>=4?'LIMITE DE 4 MARCADORES ATINGIDO':'+2 MARCADORES · GASTAR UMA AÇÃO';
+    }
+    function onFieldChange(el){
+      const c=active(); const path=el.dataset.path; if(!path) return;
+      let value=el.value;
+      if(el.type==='number') value=clampNumber(value,Number(el.min||0),Number(el.max||99));
+      if(path.startsWith('attributes.')) value=clampNumber(value,4,20);
+      setPath(c,path,value);
+      if(path==='resources.pv.current'||path==='resources.pd.current'){
+        const r=path.split('.')[1]; c.resources[r].current=Math.min(c.resources[r].current,c.resources[r].max); $(r+'Current').value=c.resources[r].current; renderPips(r);
+      }
+      if(path==='resources.pv.max'||path==='resources.pd.max'){
+        const r=path.split('.')[1]; c.resources[r].max=Math.max(1,c.resources[r].max); c.resources[r].current=Math.min(c.resources[r].current,c.resources[r].max); $(r+'Current').value=c.resources[r].current; renderPips(r);
+      }
+      if(path.startsWith('attributes.')) updateSkillDice();
+      if(path==='name') renderSelect();
+      if(path==='role') renderClassAbility();
+      save();
+    }
+    document.addEventListener('input',e=>{ if(e.target.matches('[data-path]')) onFieldChange(e.target); });
+    document.addEventListener('change',e=>{
+      if(e.target.matches('[data-path]')) {
+        onFieldChange(e.target);
+        if(e.target.dataset.path==='role') renderClassAbility();
+        if(e.target.dataset.path==='profession') applyProfessionPresetIfNeeded();
+      }
+      if(e.target.matches('[data-skill]')){
+        const [index,key]=e.target.dataset.skill.split('.'); const skill=active().skills[Number(index)];
+        skill[key]=key==='die'?normalizeDie(e.target.value):e.target.value;
+        if(key==='die') e.target.value=skill.die;
+        if(key==='attribute'||key==='die') updateSkillDice(); save();
+      }
+    });
+    document.addEventListener('input',e=>{
+      if(e.target.matches('[data-skill]')){
+        const [index,key]=e.target.dataset.skill.split('.'); if(key==='name'){active().skills[Number(index)].name=e.target.value;save();}
+      }
+    });
+    document.addEventListener('click',e=>{
+      const step=e.target.closest('[data-step]');
+      if(step){
+        const c=active();const path=step.dataset.step;const parts=path.split('.');let obj=c;for(let i=0;i<parts.length-1;i++)obj=obj[parts[i]];const key=parts.at(-1);
+        if(path.startsWith('attributes.')){
+          const current=Number(obj[key]||4);const nearest=DIE_SIDES.reduce((best,value)=>Math.abs(value-current)<Math.abs(best-current)?value:best,DIE_SIDES[0]);
+          const index=DIE_SIDES.indexOf(nearest);obj[key]=DIE_SIDES[Math.max(0,Math.min(DIE_SIDES.length-1,index+Number(step.dataset.delta)))];
+        } else obj[key]=clampNumber(Number(obj[key])+Number(step.dataset.delta));
+        const input=document.querySelector(`[data-path="${path}"]`);input.value=obj[key];updateSkillDice();save();
+      }
+      const remove=e.target.closest('[data-remove-skill]');
+      if(remove){active().skills.splice(Number(remove.dataset.removeSkill),1);renderSkills();updateSkillDice();save();}
+      const slot=e.target.closest('[data-slot]');
+      if(slot){const i=Number(slot.dataset.slot);active().impulse.slots[i]=!active().impulse.slots[i];renderImpulse();save();}
+      const analysisSlot=e.target.closest('[data-analysis-slot]');
+      if(analysisSlot){
+        const i=Number(analysisSlot.dataset.analysisSlot);
+        const current=active().analysis.markers;
+        active().analysis.markers=i<current?current-1:Math.min(4,current+1);
+        renderAnalysis();save();
+      }
+    });
+    $('gainAnalysis').addEventListener('click',()=>{
+      active().analysis.markers=Math.min(4,active().analysis.markers+2);
+      renderAnalysis();save();
+    });
+    $('addSkill').addEventListener('click',()=>{active().skills.push({name:'Nova perícia',die:'d4',attribute:'physical'});renderSkills();updateSkillDice();save();const inputs=$('skillsList').querySelectorAll('.skill-input.name');inputs[inputs.length-1]?.focus();});
+    $('characterSelect').addEventListener('change',e=>{app.activeId=e.target.value;updateIdentity();save();});
+    $('newCharacter').addEventListener('click',()=>{const c=freshCharacter();app.characters.push(c);app.activeId=c.id;updateIdentity();save();$('characterName').focus();$('characterName').select();});
+    $('duplicateCharacter').addEventListener('click',()=>{const c=deepClone(active());c.id=makeId();c.name=(c.name||'AGENTE')+' — CÓPIA';app.characters.push(c);app.activeId=c.id;updateIdentity();save();showToast('Personagem duplicado.');});
+    $('deleteCharacter').addEventListener('click',()=>{if(app.characters.length<=1){showToast('Mantenha ao menos um personagem no arquivo.');return;}$('confirmModal').classList.add('open');});
+    $('cancelDelete').addEventListener('click',()=>$('confirmModal').classList.remove('open'));
+    $('confirmDelete').addEventListener('click',()=>{app.characters=app.characters.filter(c=>c.id!==app.activeId);app.activeId=app.characters[0].id;$('confirmModal').classList.remove('open');updateIdentity();save();showToast('Personagem excluído.');});
+    function safeFileName(name){
+      const normalized=String(name||'agente').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const slug=normalized.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,48);
+      return `ficha-${slug||'agente'}.html`;
+    }
+    function buildCharacterHtmlFile(){
+      const snapshot=document.documentElement.cloneNode(true);
+      let payload=snapshot.querySelector('#opCharacterPayload');
+      if(!payload){
+        payload=document.createElement('script');
+        payload.type='application/json';
+        payload.id='opCharacterPayload';
+        snapshot.querySelector('head').appendChild(payload);
+      }
+      // Escapar <, > e & impede que texto de anotações seja interpretado como HTML.
+      const safeJson=JSON.stringify(active()).replace(/[<>&]/g,ch=>({'<':'\\u003c','>':'\\u003e','&':'\\u0026'}[ch]));
+      payload.dataset.exportId=makeId();
+      payload.textContent=safeJson;
+      const documentText='<!doctype html>\n'+snapshot.outerHTML;
+      const blob=new Blob([documentText],{type:'text/html;charset=utf-8'});
+      const filename=safeFileName(active().name);
+      let file=null;
+      try { file=new File([blob],filename,{type:'text/html'}); } catch(err) { /* Navegadores antigos: o Blob continua disponível para download. */ }
+      return {blob,file,filename};
+    }
+    function downloadBlob(blob,filename){
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=filename; a.style.display='none';
+      document.body.appendChild(a); a.click(); a.remove();
+      window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }
+    $('exportCharacter').addEventListener('click',async()=>{
+      try{
+        const {blob,file,filename}=buildCharacterHtmlFile();
+        // Em celulares compatíveis, a folha nativa permite salvar em Arquivos ou enviar por app.
+        if(file && navigator.share && navigator.canShare){
+          try{
+            if(navigator.canShare({files:[file]})){
+              await navigator.share({files:[file],title:`Salvar ficha de ${active().name||'agente'}`,text:'Escolha salvar no aparelho ou compartilhar esta ficha HTML.'});
+              showToast('Ficha enviada ao menu de compartilhamento do aparelho.');
+              return;
+            }
+          }catch(err){ if(err?.name==='AbortError') return; }
+        }
+        downloadBlob(blob,filename);
+        showToast('Ficha salva em HTML. Abra o arquivo no navegador ou envie aos jogadores.');
+      }catch(err){console.error(err);showToast('Não foi possível salvar o arquivo. Tente novamente.');}
+    });
+    $('importCharacter').addEventListener('click',()=>$('fileInput').click());
+    $('fileInput').addEventListener('change',async e=>{
+      const file=e.target.files?.[0];if(!file)return;
+      try{
+        const fileText=await file.text();
+        let parsed;
+        if(/\.html?$/i.test(file.name) || /id=["']opCharacterPayload["']/.test(fileText)){
+          const importedDocument=new DOMParser().parseFromString(fileText,'text/html');
+          const payload=importedDocument.getElementById('opCharacterPayload');
+          if(!payload) throw new Error('HTML sem dados de personagem incorporados.');
+          parsed=JSON.parse(payload.textContent);
+        }else parsed=JSON.parse(fileText);
+        const c=normalizeCharacter(parsed);c.id=makeId();app.characters.push(c);app.activeId=c.id;updateIdentity();save();showToast('Ficha importada com sucesso.');
+      }catch(err){console.error(err);showToast('Arquivo inválido. Use uma ficha HTML exportada ou um backup JSON.');}
+      e.target.value='';
+    });
+    function toBase64Utf8(str){const bytes=new TextEncoder().encode(str);let binary='';bytes.forEach(b=>binary+=String.fromCharCode(b));return btoa(binary);}
+    function fromBase64Utf8(str){const binary=atob(str);const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes);}
+    const SHARE_SITE_KEY=STORAGE_KEY+'-public-site-url';
+    function currentPublicSiteBase(){
+      if(!/^https?:$/.test(location.protocol) || !location.hostname) return null;
+      const host=location.hostname.toLowerCase();
+      if(host==='localhost' || host==='127.0.0.1' || host==='::1') return null;
+      const base=new URL(location.href);
+      base.hash='';
+      return base.toString();
+    }
+    function normalizePublicSiteUrl(raw){
+      const parsed=new URL(String(raw||'').trim());
+      if(parsed.protocol!=='https:') throw new Error('Use o endereço HTTPS público do site.');
+      if(!parsed.hostname || parsed.username || parsed.password) throw new Error('Endereço do site inválido.');
+      parsed.hash='';
+      // GitHub Pages costuma usar a pasta do repositório. Garante a barra final
+      // para não gerar links para uma rota relativa errada.
+      if(!/\.html?$/i.test(parsed.pathname) && !parsed.pathname.endsWith('/')) parsed.pathname+='/';      return parsed.toString();
+    }
+    function buildShareUrl(base){
+      const shareUrl=new URL(base);
+      shareUrl.hash='ficha='+encodeURIComponent(toBase64Utf8(JSON.stringify(active())));
+      return shareUrl.toString();
+    }
+    function savedPublicSiteUrl(){
+      try{return localStorage.getItem(SHARE_SITE_KEY) || '';}catch(err){return '';}
+    }
+    function openShareSetup(){
+      $('shareSiteConfig').classList.remove('hidden-panel');
+      $('shareResult').classList.add('hidden-panel');
+      $('shareSiteUrl').value=currentPublicSiteBase() || savedPublicSiteUrl();
+      $('shareModalHelp').textContent='Para compartilhar por link, o site precisa estar publicado na internet. Cole o endereço público do GitHub Pages abaixo. Não envie o arquivo HTML como texto: ele é o código do site.';
+      $('shareModal').classList.add('open');
+      if(!$('shareSiteUrl').value) $('shareSiteUrl').focus(); else $('shareSiteUrl').select();
+    }
+    function showShareLink(url){
+      $('shareSiteConfig').classList.add('hidden-panel');
+      $('shareResult').classList.remove('hidden-panel');
+      $('shareLinkField').value=url;
+      $('shareModalHelp').textContent='Link pronto. Envie somente o endereço abaixo; ele contém uma cópia dos dados deste personagem.';
+      $('shareModal').classList.add('open');
+      $('shareLinkField').focus();
+      $('shareLinkField').select();
+      $('shareLinkField').setSelectionRange(0,$('shareLinkField').value.length);
+    }
+    async function copyCurrentShareLink(){
+      const field=$('shareLinkField');
+      if(!field.value){showToast('Gere o link antes de copiar.');return false;}
+      try{
+        if(navigator.clipboard?.writeText && window.isSecureContext){
+          await navigator.clipboard.writeText(field.value);
+          showToast('Link copiado! Envie esse endereço aos jogadores.');
+          return true;
+        }
+      }catch(err){ /* tenta o método compatível abaixo */ }
+      try{
+        field.focus(); field.select(); field.setSelectionRange(0,field.value.length);
+        if(document.execCommand && document.execCommand('copy')){
+          showToast('Link copiado! Envie esse endereço aos jogadores.');
+          return true;
+        }
+      }catch(err){ /* mantém o endereço selecionado para cópia manual */ }
+      $('shareModalHelp').textContent='Não foi possível copiar automaticamente. O link está selecionado: no computador use Ctrl+C; no celular, toque e segure o texto e escolha Copiar.';
+      return false;
+    }
+    $('copyShareLink').addEventListener('click',copyCurrentShareLink);
+    $('shareViaDevice').addEventListener('click',async()=>{
+      const url=$('shareLinkField').value;
+      if(!url){showToast('Gere o link antes de compartilhar.');return;}
+      if(navigator.share){
+        try{await navigator.share({title:`Ficha de ${active().name||'agente'}`,text:'Minha ficha de Ordem Paranormal:',url});}
+        catch(err){if(err?.name!=='AbortError') showToast('O compartilhamento foi cancelado ou não está disponível. Copie o link manualmente.');}
+      }else{
+        await copyCurrentShareLink();
+      }
+    });
+    $('generateShareLink').addEventListener('click',()=>{
+      try{
+        const normalized=normalizePublicSiteUrl($('shareSiteUrl').value);
+        try{localStorage.setItem(SHARE_SITE_KEY,normalized);}catch(err){/* o link ainda pode ser gerado nesta sessão */}
+        const url=buildShareUrl(normalized);
+        showShareLink(url);
+      }catch(err){
+        $('shareModalHelp').textContent=err?.message || 'Endereço inválido. Cole o endereço HTTPS que abre o site publicado.';
+        $('shareSiteUrl').focus();
+      }
+    });
+    $('closeShareModal').addEventListener('click',()=>$('shareModal').classList.remove('open'));
+    $('shareModal').addEventListener('click',e=>{if(e.target===$('shareModal')) $('shareModal').classList.remove('open');});
+    $('shareCharacter').addEventListener('click',()=>{
+      try{
+        const base=currentPublicSiteBase() || savedPublicSiteUrl() || null;
+        if(!base){openShareSetup();return;}
+        showShareLink(buildShareUrl(base));
+      }catch(err){console.error(err);openShareSetup();showToast('Configure o endereço público do site para gerar um link.');}
+    });
+    $('printCharacter').addEventListener('click',()=>window.print());
+    function importFromHash(){
+      const params=new URLSearchParams(location.hash.replace(/^#/,'') );
+      const encoded=params.get('ficha');
+      if(!encoded) return;
+      try{
+        const data=JSON.parse(fromBase64Utf8(encoded));
+        const c=normalizeCharacter(data);c.id=makeId();c.name=(c.name||'AGENTE')+' — CÓPIA';
+        app.characters.push(c);app.activeId=c.id;
+        try{history.replaceState(null,'',location.pathname+location.search);}catch(err){location.hash='';}
+        showToast('Cópia recebida pelo link.');
+      }catch(err){console.error(err);showToast('O link compartilhado está inválido ou incompleto.');}
+    }
+    importFromHash(); updateIdentity(); save(); cloudInit();
+  </script>
+</body>
+</html>
