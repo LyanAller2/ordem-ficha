@@ -708,7 +708,7 @@
       try {
         const portableSaved=JSON.parse(localStorage.getItem(activeStorageKey)||'null');
         if(portableSaved && Array.isArray(portableSaved.characters) && portableSaved.characters.length){
-          app.characters=portableSaved.characters.map(normalizeCharacter); app.activeId=portableSaved.activeId;
+          app.characters=portableSaved.characters.map(normalizeCharacter); app.activeId=portableSaved.activeId; app.visualSettings=normalizeVisualSettings(portableSaved.visualSettings);
         }
       } catch(err) { console.warn('Não foi possível ler o salvamento desta cópia portátil.',err); }
       if(!app.characters.length){
@@ -720,7 +720,7 @@
       try {
         const saved=JSON.parse(localStorage.getItem(activeStorageKey)||'null');
         if(saved && Array.isArray(saved.characters) && saved.characters.length){
-          app.characters=saved.characters.map(normalizeCharacter); app.activeId=saved.activeId;
+          app.characters=saved.characters.map(normalizeCharacter); app.activeId=saved.activeId; app.visualSettings=normalizeVisualSettings(saved.visualSettings);
         }
       } catch(err) { console.warn('Não foi possível ler o salvamento local.',err); }
     }
@@ -1043,7 +1043,7 @@
       guestPlayerName=result.player_name||'Jogador';
       activeStorageKey=STORAGE_KEY+'-guest-'+playerAccessToken.slice(0,12);
       if(result.sheet_data)app=normalizeApp(result.sheet_data);
-      else {const first=freshCharacter('AGENTE');app={characters:[first],activeId:first.id};}
+      else {const first=freshCharacter('AGENTE');app={characters:[first],activeId:first.id,visualSettings:normalizeVisualSettings(null)};}
       updateIdentity();
       ['newCharacter','duplicateCharacter','deleteCharacter','characterSelect','importCharacter','shareCharacter'].forEach(id=>$(id).classList.add('cloud-hidden'));
       $('cloudCurrentLabel').textContent='Jogador autorizado · '+guestPlayerName;
