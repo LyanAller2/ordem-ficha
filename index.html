@@ -654,11 +654,12 @@
     function showToast(message){ const el=$('toast'); el.textContent=message; el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),2300); }
     let cloudClient=null, cloudUser=null, cloudCampaign=null, cloudRole=null, cloudChannel=null, cloudSaveTimer=null, cloudSaving=false;
     let cloudViewingAccessId=null, cloudMasterReturnState=null, masterViewingSheet=false;
+    let masterSheetSaveTimer=null, masterSheetSaving=false, masterSheetSavePending=false;
     let playerAccessToken=null, playerAccessId=null, playerAccessCampaignId=null, guestPlayerName='', guestSaveTimer=null, guestSaving=false, guestSavePending=false;
     const SUPABASE_URL='https://wewxhztsjcnjzsproozd.supabase.co';
     const SUPABASE_PUBLIC_KEY='sb_publishable_QXN11JTAx_h6lSE0MHNA4Q_20nnUPn8';
     function save(){
-      if(masterViewingSheet) return;
+      if(masterViewingSheet){ scheduleMasterSheetSave(); return; }
       try { localStorage.setItem(activeStorageKey,JSON.stringify(app)); $('saveState').textContent='● SALVO NESTE NAVEGADOR'; $('saveState').style.color='var(--green)'; }
       catch(err){ $('saveState').textContent='● EXPORTAR PARA NÃO PERDER'; $('saveState').style.color='#e6a080'; }
       if(playerAccessToken) scheduleGuestSave();
@@ -798,11 +799,13 @@
       const otherAccesses=accesses.filter(access=>access.revoked || !access.player_name || !access.player_name.trim() || access.player_name==='Aguardando jogador');
       if(masterViewingSheet && cloudViewingAccessId){
         const current=activeNamed.find(access=>access.id===cloudViewingAccessId);
-        const currentSheet=current?cloudSheetForAccess(current):null;
-        if(current && currentSheet){cloudShowSheet(current,currentSheet);return;}
-        cloudRestoreMasterSheetView();
-        cloudViewingAccessId=null;
-        cloudShow('dashboard');
+        // Não substitui o conteúdo que o mestre está editando quando chega um evento Realtime.
+        // Assim, uma alteração remota não apaga campos ainda não salvos no editor.
+        if(!current){
+          cloudRestoreMasterSheetView();
+          cloudViewingAccessId=null;
+          cloudShow('dashboard');
+        }
       }
       cloudRenderAccessCards(activeNamed,host,'Nenhuma ficha ativa com nome confirmado ainda.',true);
       cloudRenderAccessCards(otherAccesses,otherHost,'Nenhum outro acesso pendente ou revogado.',false);
@@ -817,12 +820,40 @@
       const root=$('appShell');
       root.classList.toggle('master-sheet-readonly',enabled);
       ['characterSelect','newCharacter','duplicateCharacter','deleteCharacter','exportCharacter','importCharacter','shareCharacter'].forEach(id=>{
-        $(id).classList.toggle('cloud-hidden',enabled);
+        $(id).classList.toggle('cloud-hidden',masterViewingSheet);
       });
       root.querySelectorAll('input,textarea,select,button').forEach(control=>{
         if(control.id==='printCharacter') return;
         control.disabled=enabled;
       });
+    }
+    function scheduleMasterSheetSave(){
+      clearTimeout(masterSheetSaveTimer);
+      masterSheetSaveTimer=setTimeout(async()=>{
+        if(!masterViewingSheet || !cloudViewingAccessId || !cloudClient || !cloudUser) return;
+        if(masterSheetSaving){masterSheetSavePending=true;return;}
+        masterSheetSaving=true;
+        $('saveState').textContent='● SALVANDO ALTERAÇÕES...';
+        $('saveState').style.color='var(--muted)';
+        try{
+          const snapshot=deepClone(app);
+          const {data,error}=await cloudClient.from('campaign_player_sheets')
+            .update({sheet_data:snapshot,updated_at:new Date().toISOString()})
+            .eq('access_id',cloudViewingAccessId)
+            .select('id');
+          if(error) throw error;
+          if(!data || !data.length) throw new Error('A ficha não foi atualizada. Confira se o acesso ainda está ativo.');
+          $('saveState').textContent='● ALTERAÇÕES SALVAS NA NUVEM';
+          $('saveState').style.color='var(--green)';
+        }catch(err){
+          $('saveState').textContent='● ERRO AO SALVAR';
+          $('saveState').style.color='#e6a080';
+          cloudMessage('Não foi possível salvar a edição do mestre: '+(err.message||err));
+        }finally{
+          masterSheetSaving=false;
+          if(masterSheetSavePending){masterSheetSavePending=false;scheduleMasterSheetSave();}
+        }
+      },500);
     }
     function cloudRestoreMasterSheetView(){
       if(!masterViewingSheet || !cloudMasterReturnState) return;
@@ -841,10 +872,10 @@
       masterViewingSheet=true;
       app=normalizeApp(sheet.sheet_data);
       updateIdentity();
-      cloudSetMasterReadonly(true);
+      cloudSetMasterReadonly(false);
       cloudShow('hidden');
-      $('cloudCurrentLabel').textContent='VISUALIZANDO FICHA · '+access.player_name+' · SOMENTE LEITURA';
-      $('saveState').textContent='● VISUALIZAÇÃO DO MESTRE · SOMENTE LEITURA';
+      $('cloudCurrentLabel').textContent='EDITANDO FICHA · '+access.player_name+' · SALVAMENTO AUTOMÁTICO ATIVO';
+      $('saveState').textContent='● EDIÇÃO DO MESTRE ATIVA';
       $('saveState').style.color='var(--green)';
     }
     function guestRequestHeaders(extra={}){
@@ -958,7 +989,7 @@
       renderSelect(); renderSkills(); renderPips('pv'); renderPips('pd'); renderImpulse(); renderAnalysis(); updateSkillDice(); renderClassAbility(); renderProfessionAbility();
     }
     function renderClassAbility(){
-      const role=String(active().role || '').trim().toUpperCase();
+      const role=String(active().role || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').trim().toUpperCase();
       $('executorAbilityPanel').classList.toggle('hidden-panel',role!=='EXECUTOR');
       $('analistaAbilityPanel').classList.toggle('hidden-panel',role!=='ANALISTA');
       $('vigilanteAbilityPanel').classList.toggle('hidden-panel',role!=='VIGILANTE');
