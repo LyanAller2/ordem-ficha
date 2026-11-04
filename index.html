@@ -452,7 +452,7 @@
             <p class="class-ability-copy">Você possui uma barra de Ímpeto com três espaços. Sempre que falha em um teste, preenche um espaço na barra.</p>
             <p class="class-ability-copy">Você pode apagar espaços preenchidos para:</p>
             <ul class="class-ability-copy">
-              <li>Gastar <strong>1 espaço</strong> para receber <strong>+1</strong> em um teste.</li>
+              <li>Gastar <strong>1 espaço</strong> para receber <strong>+1d4</strong> em um teste (dado triangular).</li>
               <li>Gastar <strong>3 espaços</strong> para aumentar um atributo em um passo até o fim da cena.</li>
             </ul>
           </section>
@@ -483,7 +483,7 @@
               <span class="panel-kicker">HABILIDADE DE CLASSE · VIGILANTE</span>
             </div>
             <p class="class-ability-copy">Uma vez por rodada, quando você ou outro ser em alcance curto faz um teste, você pode gastar <strong>2 PD</strong> para rolar novamente, ou para fazer o outro ser rolar novamente, um dos dados do teste cujo resultado não tenha sido 1.</p>
-            <p class="class-ability-copy">Além disso, em combates, você pode fazer sua ação na fase dela ou em fases posteriores, e após qualquer ação daquela fase já ter sido rolada.</p>
+            
           </section>
 
           <section class="panel">
@@ -989,7 +989,7 @@
       renderSelect(); renderSkills(); renderPips('pv'); renderPips('pd'); renderImpulse(); renderAnalysis(); updateSkillDice(); renderClassAbility(); renderProfessionAbility();
     }
     function renderClassAbility(){
-      const role=String(active().role || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').trim().toUpperCase();
+      const role=String(active().role || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
       $('executorAbilityPanel').classList.toggle('hidden-panel',role!=='EXECUTOR');
       $('analistaAbilityPanel').classList.toggle('hidden-panel',role!=='ANALISTA');
       $('vigilanteAbilityPanel').classList.toggle('hidden-panel',role!=='VIGILANTE');
