@@ -810,12 +810,12 @@
         'Classe: '+(c.role||'—')+' | Profissão: '+(c.profession||'—')+' | Nível: '+(c.level??'—'),
         'Atributos — Físico: '+c.attributes.physical+' · Mente: '+c.attributes.mind+' · Emoção: '+c.attributes.emotion,
         'PV: '+c.resources.pv.current+'/'+c.resources.pv.max+' · PD: '+c.resources.pd.current+'/'+c.resources.pd.max,
-        'Habilidade da profissão: '+(c.professionAbility.name||'—')+'\\n'+(c.professionAbility.description||''),
-        'Perícias:\\n'+c.skills.map(sk=>sk.name+': '+sk.die+' + '+sk.attribute).join('\\n'),
-        'Anotações:\\n'+(c.notes||'—'),
+        'Habilidade da profissão: '+(c.professionAbility.name||'—')+'\n'+(c.professionAbility.description||''),
+        'Perícias:\n'+c.skills.map(sk=>sk.name+': '+sk.die+' + '+sk.attribute).join('\n'),
+        'Anotações:\n'+(c.notes||'—'),
         'Última sincronização: '+new Date(sheet.updated_at).toLocaleString('pt-BR')
       ];
-      const detail=document.createElement('div');detail.className='cloud-detail';detail.textContent=lines.join('\\n\\n');card.append(detail);host.append(card);
+      const detail=document.createElement('div');detail.className='cloud-detail';detail.textContent=lines.join('\n\n');card.append(detail);host.append(card);
     }
     function guestRequestHeaders(extra={}){
       return {'apikey':SUPABASE_PUBLIC_KEY,'x-player-token':playerAccessToken,'Content-Type':'application/json',...extra};
