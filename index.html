@@ -719,7 +719,7 @@
       host.innerHTML=''; if(!data?.length){host.innerHTML='<p>Nenhum jogador autorizado ainda. Use o formulário acima para liberar o primeiro acesso.</p>';return;}
       data.forEach(access=>{
         const sheets=Array.isArray(access.campaign_player_sheets)?access.campaign_player_sheets:[];
-        const sheet=sheets[0]||null;
+        const sheet=sheets[0]||access.campaign_player_sheets||null;
         const el=document.createElement('article');el.className='cloud-player';
         const head=document.createElement('div');head.className='cloud-player-head';
         const title=document.createElement('strong');title.textContent=access.player_name;
@@ -760,7 +760,7 @@
         if(result.sheet_data)app=normalizeApp(result.sheet_data);
         else {const first=freshCharacter('AGENTE');app={characters:[first],activeId:first.id};}
         updateIdentity();
-        ['newCharacter','duplicateCharacter','deleteCharacter'].forEach(id=>$(id).classList.add('cloud-hidden'));
+        ['newCharacter','duplicateCharacter','deleteCharacter','characterSelect','importCharacter','shareCharacter'].forEach(id=>$(id).classList.add('cloud-hidden'));
         $('cloudCurrentLabel').textContent='Jogador autorizado · '+guestPlayerName;
         $('cloudGate').classList.add('cloud-hidden');$('cloudTopbar').classList.add('cloud-hidden');$('appShell').classList.remove('cloud-hidden');
         $('saveState').textContent='● CONECTADO · '+guestPlayerName;$('saveState').style.color='var(--green)';
