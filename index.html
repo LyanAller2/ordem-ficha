@@ -938,7 +938,7 @@
       $('cloudLogin').onclick=()=>cloudSignIn(false);$('cloudSignup').onclick=()=>cloudSignIn(true);
       $('cloudCreateCampaign').onclick=cloudCreateCampaign;$('cloudCreatePlayerAccess').onclick=cloudCreatePlayerAccess;$('cloudGuestEnter').onclick=cloudClaimGuestName;
       $('cloudLogout').onclick=cloudSignOut;$('cloudSignOutTop').onclick=cloudSignOut;
-      $('cloudContinueOffline').onclick=()=>cloudShow('hidden');$('cloudOpenDashboard').onclick=cloudOpenMaster;$('cloudOpenCampaign').onclick=()=>{cloudShow('campaign');};
+      $('cloudContinueOffline').onclick=()=>cloudShow('hidden');$('cloudOpenDashboard').onclick=cloudOpenMaster;$('cloudOpenCampaign').onclick=()=>{if(masterViewingSheet){cloudRestoreMasterSheetView();cloudViewingAccessId=null;}cloudShow('campaign');};
       $('cloudBackToCampaign').onclick=()=>cloudShow('campaign');$('cloudRefresh').onclick=cloudRefreshSheets;
       const playerMatch=location.hash.match(/(?:^#|&)jogador=([A-Za-z0-9_-]{30,})/);
       if(playerMatch){playerAccessToken=playerMatch[1];cloudOpenGuest();return;}
