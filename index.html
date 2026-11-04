@@ -981,6 +981,7 @@
       cloudViewingAccessId=access.id;
       masterViewingSheet=true;
       app=normalizeApp(sheet.sheet_data);
+      applyVisualSettings();
       updateIdentity();
       cloudSetMasterReadonly(false);
       cloudShow('hidden');
@@ -1044,6 +1045,7 @@
       activeStorageKey=STORAGE_KEY+'-guest-'+playerAccessToken.slice(0,12);
       if(result.sheet_data)app=normalizeApp(result.sheet_data);
       else {const first=freshCharacter('AGENTE');app={characters:[first],activeId:first.id,visualSettings:normalizeVisualSettings(null)};}
+      applyVisualSettings();
       updateIdentity();
       ['newCharacter','duplicateCharacter','deleteCharacter','characterSelect','importCharacter','shareCharacter'].forEach(id=>$(id).classList.add('cloud-hidden'));
       $('cloudCurrentLabel').textContent='Jogador autorizado · '+guestPlayerName;
