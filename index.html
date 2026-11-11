@@ -811,6 +811,28 @@
       const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token));
       return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
     }
+    async function cloudRenewPlayerAccess(id,name){
+      if(!cloudCampaign||cloudRole!=='owner')return;
+      if(!confirm('Gerar um novo link para '+(name||'este jogador')+'? A ficha existente será preservada e o link anterior deixará de funcionar.'))return;
+      cloudMessage('Gerando novo link para a ficha existente...');
+      try{
+        const token=createPlayerToken(),tokenHash=await hashPlayerToken(token);
+        const {data,error}=await cloudClient.from('campaign_player_access')
+          .update({token_hash:tokenHash,revoked:false})
+          .eq('id',id).eq('campaign_id',cloudCampaign.id).select('id');
+        if(error)throw error;
+        if(!data||!data.length)throw new Error('Não foi possível atualizar este acesso.');
+        const link=new URL(location.href);link.hash='jogador='+token;
+        $('cloudAccessUrl').value=link.toString();$('cloudAccessResult').classList.remove('cloud-hidden');
+        $('cloudCopyAccess').onclick=async()=>{
+          const field=$('cloudAccessUrl');
+          try{await navigator.clipboard.writeText(field.value);cloudMessage('Link direto da ficha copiado. Envie somente ao jogador.');}
+          catch(err){field.focus();field.select();cloudMessage('Link selecionado. Use Ctrl+C para copiar e envie somente ao jogador.');}
+        };
+        cloudMessage('Novo link direto gerado. A ficha e os dados anteriores foram preservados.');
+        await cloudRefreshSheets();
+      }catch(err){cloudMessage('Não foi possível gerar o link: '+(err.message||err));}
+    }
     async function cloudCreatePlayerAccess(){
       if(!cloudCampaign||cloudRole!=='owner'){cloudMessage('Somente o mestre da campanha pode liberar acessos.');return;}
       cloudMessage('Gerando acesso individual...');
@@ -874,6 +896,8 @@
           const btn=document.createElement('button');btn.className='action primary';btn.textContent='ABRIR FICHA';
           btn.addEventListener('click',()=>cloudShowSheet(access,sheet));actions.append(btn);
         }
+        const renew=document.createElement('button');renew.className='action';renew.textContent='GERAR LINK DESTA FICHA';
+        renew.addEventListener('click',()=>cloudRenewPlayerAccess(access.id,access.player_name));actions.append(renew);
         if(!access.revoked){
           const revoke=document.createElement('button');revoke.className='action danger';revoke.textContent='REVOGAR ACESSO';
           revoke.addEventListener('click',()=>cloudRevokePlayerAccess(access.id,access.player_name));actions.append(revoke);
