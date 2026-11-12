@@ -901,6 +901,9 @@
         if(!access.revoked){
           const revoke=document.createElement('button');revoke.className='action danger';revoke.textContent='REVOGAR ACESSO';
           revoke.addEventListener('click',()=>cloudRevokePlayerAccess(access.id,access.player_name));actions.append(revoke);
+        }else{
+          const discard=document.createElement('button');discard.className='action danger';discard.textContent='EXCLUIR FICHA';
+          discard.addEventListener('click',()=>cloudDeleteRevokedAccess(access.id,access.player_name,!!sheet));actions.append(discard);
         }
         if(activeList){
           if(sheet || !access.revoked) el.append(actions);
@@ -942,6 +945,25 @@
       }
       cloudRenderAccessCards(activeNamed,host,'Nenhuma ficha ativa com nome confirmado ainda.',true);
       cloudRenderAccessCards(otherAccesses,otherHost,'Nenhum outro acesso pendente ou revogado.',false);
+    }
+    async function cloudDeleteRevokedAccess(id,name,hasSheet){
+      if(!cloudCampaign||cloudRole!=='owner')return;
+      const detail=hasSheet?' A ficha e todos os dados salvos nela também serão apagados.':'';
+      if(!confirm('Excluir permanentemente o acesso revogado de '+(name||'jogador')+'?'+detail+' Esta ação não pode ser desfeita.'))return;
+      cloudMessage('Excluindo acesso revogado...');
+      try{
+        const {data,error}=await cloudClient.from('campaign_player_access')
+          .delete().eq('id',id).eq('campaign_id',cloudCampaign.id).eq('revoked',true).select('id');
+        if(error)throw error;
+        if(!data||!data.length)throw new Error('O acesso não foi encontrado ou não está revogado.');
+        if(masterViewingSheet&&cloudViewingAccessId===id){
+          cloudRestoreMasterSheetView();
+          cloudViewingAccessId=null;
+          cloudShow('dashboard');
+        }
+        cloudMessage('Acesso revogado excluído'+(hasSheet?' junto com a ficha vinculada.':'.'));
+        await cloudRefreshSheets();
+      }catch(err){cloudMessage('Não foi possível excluir: '+(err.message||err));}
     }
     async function cloudRevokePlayerAccess(id,name){
       if(!confirm('Revogar o acesso de '+name+'? A pessoa não conseguirá mais abrir ou sincronizar esta ficha.'))return;
